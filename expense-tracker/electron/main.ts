@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from "electron";
 import path from "node:path";
 import { runMigrations } from "./db/client";
+import { registerIpcHandlers } from "./ipc";
 
 const isDev = !app.isPackaged;
 
@@ -25,6 +26,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   runMigrations();
+  registerIpcHandlers();
   createWindow();
 
   app.on("activate", () => {

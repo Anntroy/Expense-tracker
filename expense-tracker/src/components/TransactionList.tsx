@@ -4,7 +4,7 @@ import type { Transaction } from "@/lib/types";
 type Props = {
   transactions: Transaction[];
   currency: string;
-  onDelete: (id: string) => void;
+  onDelete: (id: number) => void;
 };
 
 export function TransactionList({ transactions, currency, onDelete }: Props) {

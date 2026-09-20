@@ -2,14 +2,14 @@
   "name": "expense-tracker",
   "version": "0.1.0",
   "private": true,
-  "main": "dist-electron/main.js",
+  "main": "dist-electron/electron/main.js",
   "scripts": {
     "dev": "concurrently -k -n NEXT,ELECTRON -c blue,magenta \"npm:dev:next\" \"npm:dev:electron\"",
     "dev:next": "next dev",
     "dev:electron": "wait-on http://localhost:3000 && npm run build:electron && cross-env NODE_ENV=development electron .",
     "build": "npm run build:next && npm run build:electron && electron-builder",
     "build:next": "next build",
-    "build:electron": "tsc -p electron/tsconfig.json && node -e \"const fs=require('fs'); if (fs.existsSync('electron/db/migrations')) fs.cpSync('electron/db/migrations','dist-electron/db/migrations',{recursive:true})\"",
+    "build:electron": "tsc -p electron/tsconfig.json && node -e \"const fs=require('fs'); if (fs.existsSync('electron/db/migrations')) fs.cpSync('electron/db/migrations','dist-electron/electron/db/migrations',{recursive:true})\"",
     "db:generate": "drizzle-kit generate",
     "lint": "eslint"
   },

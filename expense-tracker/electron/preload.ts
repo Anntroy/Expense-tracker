@@ -1,6 +1,12 @@
-import { contextBridge } from "electron";
+import { contextBridge, ipcRenderer } from "electron";
+import type { Transaction } from "../src/lib/types";
+import type { TransactionInput } from "../src/lib/schema";
 
-// Las operaciones de transacciones (crear/listar/borrar, resumen mensual)
-// se exponen acá vía contextBridge en el paso 4, una vez exista la capa
-// de datos en el proceso principal.
-contextBridge.exposeInMainWorld("api", {});
+contextBridge.exposeInMainWorld("api", {
+  transactions: {
+    list: (): Promise<Transaction[]> => ipcRenderer.invoke("transactions:list"),
+    create: (input: TransactionInput): Promise<Transaction> =>
+      ipcRenderer.invoke("transactions:create", input),
+    delete: (id: number): Promise<void> => ipcRenderer.invoke("transactions:delete", id),
+  },
+});

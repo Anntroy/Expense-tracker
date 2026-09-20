@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SummaryCards } from "@/components/SummaryCards";
 import { TransactionForm } from "@/components/TransactionForm";
 import { TransactionList } from "@/components/TransactionList";
@@ -8,24 +8,47 @@ import { CURRENCIES, type Currency, type Transaction } from "@/lib/types";
 
 export default function Home() {
   const [currency, setCurrency] = useState<Currency>("EUR");
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[] | null>(null);
+  const [apiMissing, setApiMissing] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      if (typeof window === "undefined" || !window.api) {
+        if (!cancelled) setApiMissing(true);
+        return;
+      }
+      const list = await window.api.transactions.list();
+      if (!cancelled) setTransactions(list);
+    }
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const { income, expenses, balance } = useMemo(() => {
-    const income = transactions
+    const list = transactions ?? [];
+    const income = list
       .filter((t) => t.type === "income")
       .reduce((sum, t) => sum + t.amount, 0);
-    const expenses = transactions
+    const expenses = list
       .filter((t) => t.type === "expense")
       .reduce((sum, t) => sum + t.amount, 0);
     return { income, expenses, balance: income - expenses };
   }, [transactions]);
 
-  function handleAdd(input: Omit<Transaction, "id">) {
-    setTransactions((prev) => [{ ...input, id: crypto.randomUUID() }, ...prev]);
+  async function handleAdd(input: Omit<Transaction, "id">) {
+    const created = await window.api.transactions.create(input);
+    setTransactions((prev) => [created, ...(prev ?? [])]);
   }
 
-  function handleDelete(id: string) {
-    setTransactions((prev) => prev.filter((t) => t.id !== id));
+  async function handleDelete(id: number) {
+    await window.api.transactions.delete(id);
+    setTransactions((prev) => (prev ?? []).filter((t) => t.id !== id));
   }
 
   const monthLabel = new Intl.DateTimeFormat("es-ES", {
@@ -59,16 +82,32 @@ export default function Home() {
           </label>
         </header>
 
-        <SummaryCards income={income} expenses={expenses} balance={balance} currency={currency} />
+        {apiMissing ? (
+          <p className="rounded-lg border border-dashed border-amber-400 bg-amber-50 p-6 text-center text-sm text-amber-800 dark:border-amber-600 dark:bg-amber-950 dark:text-amber-200">
+            Esta vista necesita ejecutarse dentro de la app de escritorio (
+            <code>npm run dev</code>), no en una pestaña de navegador normal: ahí no existe el
+            puente <code>window.api</code> que da acceso a los datos guardados.
+          </p>
+        ) : transactions === null ? (
+          <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">Cargando…</p>
+        ) : (
+          <>
+            <SummaryCards
+              income={income}
+              expenses={expenses}
+              balance={balance}
+              currency={currency}
+            />
 
-        <TransactionForm onAdd={handleAdd} />
+            <TransactionForm onAdd={handleAdd} />
 
-        <TransactionList transactions={transactions} currency={currency} onDelete={handleDelete} />
-
-        <p className="text-center text-xs text-zinc-400">
-          Vista preliminar: estos datos viven solo en memoria y se pierden al recargar. La
-          persistencia local con SQLite llega en el próximo paso.
-        </p>
+            <TransactionList
+              transactions={transactions}
+              currency={currency}
+              onDelete={handleDelete}
+            />
+          </>
+        )}
       </main>
     </div>
   );

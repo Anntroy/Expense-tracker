@@ -35,7 +35,16 @@ App de escritorio para controlar los ingresos y gastos del mes.
 - `electron/db/schema.ts`: la tabla `transactions` (`id` autoincrement, `type`, `amount`, `category`, `description`, `date`). **El monto se guarda en centavos (integer)**, no en decimal, para evitar errores de redondeo de punto flotante — la conversión centavos↔decimal se hace en la capa que consuma esta tabla (paso 4).
 - `electron/db/migrations/`: migraciones SQL generadas por `drizzle-kit`, se commitean al repo (son el historial versionado del esquema).
 - `electron/db/client.ts`: abre `expense-tracker.db` en `app.getPath('userData')` y corre las migraciones pendientes (`runMigrations()`, llamado desde `electron/main.ts` en `app.whenReady()`).
-- `build:electron` copia `electron/db/migrations/**` a `dist-electron/db/migrations/` para que el `migrate()` en runtime las encuentre al lado del JS compilado, tanto en dev como una vez empaquetada la app.
+- `build:electron` copia `electron/db/migrations/**` a `dist-electron/electron/db/migrations/` para que el `migrate()` en runtime las encuentre al lado del JS compilado, tanto en dev como una vez empaquetada la app.
+
+## IPC (paso 4, ya implementado)
+
+- `electron/tsconfig.json` tiene `rootDir: ".."` (la raíz del proyecto, no `electron/`) para poder incluir `src/lib/**/*.ts` en su compilación además de `electron/**/*.ts`. Por eso el JS compilado queda en `dist-electron/electron/...` y `dist-electron/src/lib/...` (no directo en `dist-electron/`) — el campo `"main"` de `package.json` apunta a `dist-electron/electron/main.js`.
+- `electron/db/transactions.ts`: capa de acceso a datos (`listTransactions`, `createTransaction`, `deleteTransaction`), síncrona porque better-sqlite3 lo es. Importa `TransactionInputSchema` desde `src/lib/schema.ts` — **el mismo schema que usa el formulario**, no una copia — y convierte decimal↔centavos al leer/escribir.
+- `electron/ipc.ts`: registra `ipcMain.handle` para `transactions:list`, `transactions:create`, `transactions:delete`, llamado desde `electron/main.ts` en `app.whenReady()`.
+- `electron/preload.ts`: expone `window.api.transactions.{list,create,delete}` vía `contextBridge`.
+- `src/lib/electron-api.d.ts`: tipa `window.api` para el renderer.
+- **Importante para probar:** desde este paso, abrir `http://localhost:3000` en una pestaña de navegador normal ya NO alcanza para ver el flujo real — ahí no existe `window.api` (la UI muestra un aviso). Para ver la persistencia hay que mirar la ventana de Electron (`npm run dev`).
 
 ## Convenciones
 
