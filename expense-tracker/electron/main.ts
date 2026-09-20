@@ -1,5 +1,6 @@
 import { app, BrowserWindow } from "electron";
 import path from "node:path";
+import { runMigrations } from "./db/client";
 
 const isDev = !app.isPackaged;
 
@@ -23,6 +24,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  runMigrations();
   createWindow();
 
   app.on("activate", () => {

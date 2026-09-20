@@ -28,6 +28,14 @@ App de escritorio para controlar los ingresos y gastos del mes.
 
 - `npm run dev`: levanta Next.js (`localhost:3000`) y Electron en paralelo (`concurrently`); Electron espera a que Next esté listo (`wait-on`) y carga esa URL.
 - `npm run build`: `next build` (export estático a `out/`) + compila `electron/*.ts` a `dist-electron/` + `electron-builder` genera el instalador.
+- `npm run db:generate`: corre `drizzle-kit generate` y regenera los archivos `.sql` en `electron/db/migrations/` a partir de `electron/db/schema.ts`. Correr después de cualquier cambio al schema.
+
+## Base de datos (paso 3, ya implementado)
+
+- `electron/db/schema.ts`: la tabla `transactions` (`id` autoincrement, `type`, `amount`, `category`, `description`, `date`). **El monto se guarda en centavos (integer)**, no en decimal, para evitar errores de redondeo de punto flotante — la conversión centavos↔decimal se hace en la capa que consuma esta tabla (paso 4).
+- `electron/db/migrations/`: migraciones SQL generadas por `drizzle-kit`, se commitean al repo (son el historial versionado del esquema).
+- `electron/db/client.ts`: abre `expense-tracker.db` en `app.getPath('userData')` y corre las migraciones pendientes (`runMigrations()`, llamado desde `electron/main.ts` en `app.whenReady()`).
+- `build:electron` copia `electron/db/migrations/**` a `dist-electron/db/migrations/` para que el `migrate()` en runtime las encuentre al lado del JS compilado, tanto en dev como una vez empaquetada la app.
 
 ## Convenciones
 
