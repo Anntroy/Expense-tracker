@@ -54,8 +54,19 @@ export function MonthView({ month, onMonthChange, currency }: Props) {
     return { income, expenses, balance: income - expenses };
   }, [transactions]);
 
+  // Muestra el mes al que pertenece una fecha ("YYYY-MM-DD" -> "YYYY-MM").
+  function showMonthOf(date: string) {
+    const target = date.slice(0, 7);
+    if (target !== month) onMonthChange(target);
+  }
+
   async function handleAdd(input: TransactionInput) {
     await window.api.transactions.create(input);
+    if (input.date.slice(0, 7) !== month) {
+      // El movimiento cae en otro mes: se pasa a ese mes (el efecto recarga la lista).
+      showMonthOf(input.date);
+      return;
+    }
     const list = await fetchMonth(month);
     if (list) setTransactions(list);
   }
@@ -84,7 +95,7 @@ export function MonthView({ month, onMonthChange, currency }: Props) {
         <>
           <SummaryCards income={income} expenses={expenses} balance={balance} currency={currency} />
 
-          <TransactionForm onAdd={handleAdd} />
+          <TransactionForm onAdd={handleAdd} onDateChange={showMonthOf} />
 
           <CategoryDonut transactions={transactions} currency={currency} />
 

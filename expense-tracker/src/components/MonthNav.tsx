@@ -12,7 +12,16 @@ type Props = {
 
 export function MonthNav({ month, onChange }: Props) {
   const [windowEnd, setWindowEnd] = useState<MonthKey>(month);
+  const [previousMonth, setPreviousMonth] = useState<MonthKey>(month);
   const months = monthWindow(windowEnd, WINDOW_SIZE);
+
+  // Si el mes cambia desde fuera (ej. al elegir una fecha en el formulario) y queda
+  // fuera de la ventana visible, se desliza la ventana para que la pestaña se vea.
+  // Solo se reacciona al cambio de `month`, así deslizar con las flechas sigue siendo libre.
+  if (month !== previousMonth) {
+    setPreviousMonth(month);
+    if (!months.includes(month)) setWindowEnd(month);
+  }
 
   return (
     <div className="flex items-center justify-center gap-2">

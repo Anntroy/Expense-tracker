@@ -10,6 +10,8 @@ import {
 
 type Props = {
   onAdd: (input: TransactionInput) => void | Promise<void>;
+  /** Se llama al elegir una fecha completa, para que la vista pueda mostrar el mes correspondiente. */
+  onDateChange?: (date: string) => void;
 };
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -19,7 +21,7 @@ function fetchCategories(type: TransactionType): Promise<string[]> {
   return window.api.transactions.categories(type);
 }
 
-export function TransactionForm({ onAdd }: Props) {
+export function TransactionForm({ onAdd, onDateChange }: Props) {
   const [type, setType] = useState<TransactionType>("expense");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
@@ -127,6 +129,8 @@ export function TransactionForm({ onAdd }: Props) {
           onChange={(e) => {
             setDate(e.target.value);
             setError(null);
+            // Un <input type="date"> incompleto devuelve "": solo se avisa con fecha completa.
+            if (e.target.value) onDateChange?.(e.target.value);
           }}
           aria-label="Fecha"
           className="w-36 shrink-0 rounded-md border border-zinc-300 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"

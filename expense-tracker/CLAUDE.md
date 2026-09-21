@@ -66,6 +66,11 @@ App de escritorio para controlar los ingresos y gastos del mes.
 - `electron/db/repository.test.ts` crea una base **en memoria** (`:memory:`) por test y le aplica las migraciones reales de `electron/db/migrations/`, así que nunca toca los datos de la app y además valida que las migraciones dejan el esquema que el código espera. Cubre centavos↔decimal, filtro por mes (bordes y bisiestos), orden, borrado, desactivar y categorías.
 - Requiere que `better-sqlite3` esté compilado para el Node normal (hoy lo está). Si `electron-rebuild` lo recompila para Electron y `npm test` deja de poder cargarlo, habrá que recompilarlo para Node (p. ej. `npm rebuild better-sqlite3`) y volver a recompilarlo para Electron antes de empaquetar.
 
+## La vista sigue a la fecha del formulario
+
+- Al elegir una fecha completa en `TransactionForm` (`onDateChange`), `MonthView` cambia al mes de esa fecha y muestra sus movimientos. Al agregar un movimiento cuya fecha cae en otro mes, también pasa a ese mes (`handleAdd`), para que el movimiento nuevo se vea enseguida.
+- `MonthNav` reacciona a cambios de `month` hechos desde fuera: si el mes queda fuera de la ventana de 6 pestañas, la desliza para que se vea. Solo lo hace cuando `month` cambia, así que deslizar con las flechas `◀ ▶` sigue sin cambiar la selección.
+
 ## Desactivar movimientos
 
 - La tabla `transactions` tiene la columna `excluded` (boolean, `default false`, migración `0001`). Un movimiento desactivado **se conserva y se sigue viendo en la lista** (atenuado y con el monto tachado), pero **no cuenta** en el resumen del mes (`page.tsx` lo filtra antes de sumar) ni en el donut (`expenseTotalsByCategory` lo ignora).
