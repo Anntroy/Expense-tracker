@@ -434,3 +434,41 @@ describe("savings", () => {
     expect(repo.createTransaction(input({ type: "saving", memberId: ana.id })).memberId).toBe(ana.id);
   });
 });
+
+describe("summaryByCategory by type", () => {
+  const range = { from: "2026-09", to: "2026-09" };
+
+  beforeEach(() => {
+    repo.createTransaction(input({ type: "expense", category: "Comida", amount: 20 }));
+    repo.createTransaction(input({ type: "saving", category: "Vacaciones", amount: 300 }));
+    repo.createTransaction(input({ type: "saving", category: "Fondo de emergencia", amount: 100, date: "2026-08-15" }));
+    repo.createTransaction(input({ type: "income", category: "Salario", amount: 1800 }));
+  });
+
+  it("summarizes expenses by default", () => {
+    expect(repo.summaryByCategory(range)).toEqual([{ month: "2026-09", category: "Comida", amount: 20 }]);
+  });
+
+  it("summarizes savings when asked, grouped by month and category", () => {
+    const rows = repo.summaryByCategory({ from: "2026-08", to: "2026-09" }, undefined, "saving");
+    const byKey = Object.fromEntries(rows.map((r) => [`${r.month}/${r.category}`, r.amount]));
+    expect(byKey).toEqual({ "2026-09/Vacaciones": 300, "2026-08/Fondo de emergencia": 100 });
+  });
+
+  it("combines the type with the person filter and ignores deactivated savings", () => {
+    const ana = repo.createMember("Ana");
+    const mine = repo.createTransaction(input({ type: "saving", category: "Jubilación", amount: 50, memberId: ana.id }));
+    expect(repo.summaryByCategory(range, ana.id, "saving")).toEqual([
+      { month: "2026-09", category: "Jubilación", amount: 50 },
+    ]);
+    repo.setTransactionExcluded(mine.id, true);
+    expect(repo.summaryByCategory(range, ana.id, "saving")).toEqual([]);
+  });
+
+  it("can summarize income too and rejects an unknown type", () => {
+    expect(repo.summaryByCategory(range, undefined, "income")).toEqual([
+      { month: "2026-09", category: "Salario", amount: 1800 },
+    ]);
+    expect(() => repo.summaryByCategory(range, undefined, "transfer" as never)).toThrow();
+  });
+});

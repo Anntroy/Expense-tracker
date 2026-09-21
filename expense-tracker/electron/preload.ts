@@ -20,8 +20,11 @@ contextBridge.exposeInMainWorld("api", {
     delete: (id: number): Promise<void> => ipcRenderer.invoke("transactions:delete", id),
     setExcluded: (id: number, excluded: boolean): Promise<void> =>
       ipcRenderer.invoke("transactions:setExcluded", id, excluded),
-    summary: (range: MonthRange, memberId?: number | null): Promise<CategoryMonthTotal[]> =>
-      ipcRenderer.invoke("transactions:summary", range, memberId),
+    summary: (
+      range: MonthRange,
+      memberId?: number | null,
+      type?: TransactionType,
+    ): Promise<CategoryMonthTotal[]> => ipcRenderer.invoke("transactions:summary", range, memberId, type),
     categories: (type: TransactionType): Promise<string[]> =>
       ipcRenderer.invoke("transactions:categories", type),
   },

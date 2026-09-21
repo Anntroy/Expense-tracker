@@ -58,3 +58,5 @@ export const MemberFilterSchema = MemberIdSchema.nullable().optional();
 export const PinSchema = z.string().regex(/^\d{4,8}$/, { error: "El PIN debe tener entre 4 y 8 dígitos." });
 
 export const CurrencySchema = z.enum(CURRENCIES);
+
+export const TransactionTypeSchema = z.enum(TRANSACTION_TYPES);

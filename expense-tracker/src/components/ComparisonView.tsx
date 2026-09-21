@@ -1,27 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ApiMissingNotice } from "@/components/ApiMissingNotice";
 import { CategoryDetail } from "@/components/CategoryDetail";
 import { CategoryPanels } from "@/components/CategoryPanels";
 import { ComparisonTable } from "@/components/ComparisonTable";
 import { PersonSelect } from "@/components/PersonSelect";
 import { RangePicker } from "@/components/RangePicker";
-import { buildComparison } from "@/lib/comparison";
-import { currentMonthKey, monthRange, shiftMonth } from "@/lib/date";
-import { ALL_PEOPLE, filterToMemberId, personLabel, type PersonFilter } from "@/lib/member-totals";
-import { MonthRangeSchema } from "@/lib/schema";
-import { EXPENSE_CATEGORIES, type CategoryMonthTotal, type Member } from "@/lib/types";
-
-const DEFAULT_MONTHS = 6;
-
-type Fetched = {
-  /** Intervalo al que pertenecen los datos (para saber si están al día). */
-  key: string;
-  months: string[];
-  rows: CategoryMonthTotal[];
-  usedCategories: string[];
-};
+import { ALL_PEOPLE, personLabel, type PersonFilter } from "@/lib/member-totals";
+import { useCategorySummary } from "@/lib/use-category-summary";
+import { useMonthRange } from "@/lib/use-month-range";
+import { EXPENSE_CATEGORIES, type Member } from "@/lib/types";
 
 type Props = {
   currency: string;
@@ -32,71 +21,27 @@ type Props = {
 };
 
 export function ComparisonView({ currency, active, members }: Props) {
-  const [from, setFrom] = useState(() => shiftMonth(currentMonthKey(), -(DEFAULT_MONTHS - 1)));
-  const [to, setTo] = useState(() => currentMonthKey());
+  const { from, to, range, error, setRange } = useMonthRange();
   const [category, setCategory] = useState(""); // "" = todas
   const [person, setPerson] = useState<PersonFilter>(ALL_PEOPLE);
-  const [fetched, setFetched] = useState<Fetched | null>(null);
-  const [apiMissing, setApiMissing] = useState(false);
-
-  const parsed = useMemo(() => MonthRangeSchema.safeParse({ from, to }), [from, to]);
-  const rangeFrom = parsed.success ? parsed.data.from : null;
-  const rangeTo = parsed.success ? parsed.data.to : null;
-  const error = parsed.success ? null : (parsed.error.issues[0]?.message ?? "Intervalo inválido.");
-
-  useEffect(() => {
-    if (!active || rangeFrom === null || rangeTo === null) return;
-    if (typeof window === "undefined" || !window.api) {
-      Promise.resolve().then(() => setApiMissing(true));
-      return;
-    }
-
-    let cancelled = false;
-    Promise.all([
-      window.api.transactions.summary({ from: rangeFrom, to: rangeTo }, filterToMemberId(person)),
-      window.api.transactions.categories("expense"),
-    ]).then(([rows, usedCategories]) => {
-      if (cancelled) return;
-      setFetched({
-        key: `${rangeFrom}|${rangeTo}|${person}`,
-        months: monthRange(rangeFrom, rangeTo),
-        rows,
-        usedCategories,
-      });
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [active, rangeFrom, rangeTo, person]);
-
-  const comparison = useMemo(
-    () => (fetched ? buildComparison(fetched.rows, fetched.months) : null),
-    [fetched],
-  );
+  const { comparison, usedCategories, apiMissing, stale } = useCategorySummary({
+    active,
+    range,
+    person,
+    type: "expense",
+  });
 
   // Las mismas categorías que sugiere el formulario, más las que aparecen en el intervalo.
   const categoryOptions = useMemo(() => {
-    const all = new Set<string>([...EXPENSE_CATEGORIES, ...(fetched?.usedCategories ?? [])]);
-    fetched?.rows.forEach((r) => all.add(r.category));
+    const all = new Set<string>([...EXPENSE_CATEGORIES, ...usedCategories]);
+    comparison?.rows.forEach((r) => all.add(r.category));
     return Array.from(all).sort((a, b) => a.localeCompare(b));
-  }, [fetched]);
-
-  // Mientras llegan los datos del nuevo intervalo se mantiene el render anterior, atenuado.
-  const stale = fetched !== null && parsed.success && fetched.key !== `${rangeFrom}|${rangeTo}|${person}`;
+  }, [comparison, usedCategories]);
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <RangePicker
-          from={from}
-          to={to}
-          error={error}
-          onChange={(range) => {
-            setFrom(range.from);
-            setTo(range.to);
-          }}
-        />
+        <RangePicker from={from} to={to} error={error} onChange={setRange} />
         <div className="flex flex-wrap gap-4">
           <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400 sm:w-64">
             Categoría

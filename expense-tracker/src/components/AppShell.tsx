@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ComparisonView } from "@/components/ComparisonView";
 import { MonthView } from "@/components/MonthView";
+import { SavingsView } from "@/components/SavingsView";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { TabBar, type TabId } from "@/components/TabBar";
 import { currentMonthKey, formatMonthTitle, type MonthKey } from "@/lib/date";
@@ -45,7 +46,7 @@ export function AppShell({ hasPin, onLock, onAuthChanged }: Props) {
     <div className="min-h-full flex-1 bg-zinc-50 dark:bg-black">
       <main
         className={`mx-auto flex w-full flex-col gap-6 px-6 py-10 ${
-          tab === "comparison" ? "max-w-5xl" : "max-w-3xl"
+          tab === "comparison" || tab === "savings" ? "max-w-5xl" : "max-w-3xl"
         }`}
       >
         <header className="flex items-center justify-between">
@@ -134,6 +135,9 @@ export function AppShell({ hasPin, onLock, onAuthChanged }: Props) {
           hidden={tab !== "comparison"}
         >
           <ComparisonView currency={currency} active={tab === "comparison"} members={members} />
+        </div>
+        <div role="tabpanel" id="panel-savings" aria-labelledby="tab-savings" hidden={tab !== "savings"}>
+          <SavingsView currency={currency} active={tab === "savings"} members={members} />
         </div>
       </main>
 

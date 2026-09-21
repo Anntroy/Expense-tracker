@@ -16,6 +16,8 @@
   --series-4: #eda100;
   --series-5: #e87ba4;
   --series-6: #008300;
+  /* Color del ahorro (azul cielo, el mismo que las tarjetas y la lista de movimientos). */
+  --saving: #0284c7;
   /* Saturación/luminosidad de los colores generados para categorías propias. */
   --extra-s: 60%;
   --extra-l: 48%;
@@ -40,6 +42,7 @@
     --series-4: #c98500;
     --series-5: #d55181;
     --series-6: #008300;
+    --saving: #38bdf8;
     --extra-s: 55%;
     --extra-l: 55%;
   }

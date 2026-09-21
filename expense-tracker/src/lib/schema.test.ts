@@ -7,6 +7,7 @@ import {
   PinSchema,
   SetExcludedSchema,
   TransactionInputSchema,
+  TransactionTypeSchema,
 } from "./schema";
 
 const valid = {
@@ -151,5 +152,12 @@ describe("transaction types", () => {
   it("rejects any other type", () => {
     expect(TransactionInputSchema.safeParse({ ...base, type: "transfer" }).success).toBe(false);
     expect(TransactionInputSchema.safeParse({ ...base, type: "savings" }).success).toBe(false);
+  });
+});
+
+describe("TransactionTypeSchema", () => {
+  it("accepts the three types and nothing else", () => {
+    for (const ok of ["income", "expense", "saving"]) expect(TransactionTypeSchema.safeParse(ok).success).toBe(true);
+    for (const bad of ["transfer", "", "Saving", undefined]) expect(TransactionTypeSchema.safeParse(bad).success).toBe(false);
   });
 });

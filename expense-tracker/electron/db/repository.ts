@@ -10,6 +10,7 @@ import {
   MonthRangeSchema,
   SetExcludedSchema,
   TransactionInputSchema,
+  TransactionTypeSchema,
   type MonthRange,
   type TransactionInput,
 } from "../../src/lib/schema";
@@ -86,15 +87,21 @@ export function createTransactionsRepository(db: Db) {
     },
 
     /**
-     * Gasto por mes y categoría en un intervalo de meses, ignorando ingresos y
-     * movimientos desactivados. Solo devuelve los pares que tienen gasto: rellenar
+     * Total por mes y categoría de un tipo de movimiento en un intervalo de meses,
+     * ignorando los demás tipos y los movimientos desactivados. Solo devuelve los pares que tienen gasto: rellenar
      * con 0 los meses vacíos es cosa de `buildComparison`.
      *
      * `memberId` filtra por persona: omitido = todas, `null` = sin asignar, número = ese miembro.
+     * `type` es el tipo de movimiento a resumir; por defecto los gastos (también sirve para el ahorro).
      */
-    summaryByCategory(range: MonthRange, memberId?: number | null): CategoryMonthTotal[] {
+    summaryByCategory(
+      range: MonthRange,
+      memberId?: number | null,
+      type: TransactionType = "expense",
+    ): CategoryMonthTotal[] {
       const { from, to } = MonthRangeSchema.parse(range);
       const member = MemberFilterSchema.parse(memberId);
+      const parsedType = TransactionTypeSchema.parse(type);
       const memberCondition =
         member === undefined
           ? undefined
@@ -111,7 +118,7 @@ export function createTransactionsRepository(db: Db) {
         .from(transactions)
         .where(
           and(
-            eq(transactions.type, "expense"),
+            eq(transactions.type, parsedType),
             eq(transactions.excluded, false),
             gte(transactions.date, monthDateRange(from).from),
             lte(transactions.date, monthDateRange(to).to),

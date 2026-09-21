@@ -1,8 +1,9 @@
-export type TabId = "month" | "comparison";
+export type TabId = "month" | "comparison" | "savings";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "month", label: "Ingresos y gastos" },
   { id: "comparison", label: "Comparación por categoría" },
+  { id: "savings", label: "Ahorro" },
 ];
 
 type Props = {
