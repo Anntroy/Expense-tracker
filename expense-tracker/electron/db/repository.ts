@@ -1,8 +1,11 @@
 import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema";
-import { transactions } from "./schema";
+import { members, transactions } from "./schema";
 import {
+  MAX_MEMBERS,
+  MemberIdSchema,
+  MemberNameSchema,
   MonthRangeSchema,
   SetExcludedSchema,
   TransactionInputSchema,
@@ -10,7 +13,7 @@ import {
   type TransactionInput,
 } from "../../src/lib/schema";
 import { monthDateRange, type MonthKey } from "../../src/lib/date";
-import type { CategoryMonthTotal, Transaction, TransactionType } from "../../src/lib/types";
+import type { CategoryMonthTotal, Member, Transaction, TransactionType } from "../../src/lib/types";
 
 export type Db = BetterSQLite3Database<typeof schema>;
 
@@ -23,8 +26,11 @@ function toPublic(row: typeof transactions.$inferSelect): Transaction {
     description: row.description,
     date: row.date,
     excluded: row.excluded,
+    memberId: row.memberId,
   };
 }
+
+const sameName = (a: string, b: string) => a.toLocaleLowerCase("es") === b.toLocaleLowerCase("es");
 
 /**
  * Operaciones sobre la tabla `transactions`. Recibe la base como parámetro (en
@@ -46,6 +52,10 @@ export function createTransactionsRepository(db: Db) {
 
     createTransaction(input: TransactionInput): Transaction {
       const parsed = TransactionInputSchema.parse(input);
+      if (parsed.memberId !== null) {
+        const member = db.select().from(members).where(eq(members.id, parsed.memberId)).get();
+        if (!member || member.archived) throw new Error("Ese miembro no existe o está archivado.");
+      }
       const row = db
         .insert(transactions)
         .values({
@@ -54,6 +64,7 @@ export function createTransactionsRepository(db: Db) {
           category: parsed.category,
           description: parsed.description,
           date: parsed.date,
+          memberId: parsed.memberId,
         })
         .returning()
         .get();
@@ -99,6 +110,51 @@ export function createTransactionsRepository(db: Db) {
         .groupBy(month, transactions.category)
         .all();
       return rows.map((r) => ({ month: r.month, category: r.category, amount: r.cents / 100 }));
+    },
+
+    /** Todos los miembros: primero los activos y luego los archivados, cada grupo por orden de alta. */
+    listMembers(): Member[] {
+      return db
+        .select()
+        .from(members)
+        .orderBy(members.archived, members.id)
+        .all();
+    },
+
+    /** Alta de miembro: como mucho `MAX_MEMBERS` activos y sin repetir nombre (aunque el otro esté archivado). */
+    createMember(name: string): Member {
+      const parsedName = MemberNameSchema.parse(name);
+      const all = db.select().from(members).all();
+      if (all.filter((m) => !m.archived).length >= MAX_MEMBERS) {
+        throw new Error(`Ya hay ${MAX_MEMBERS} miembros activos. Archivá uno para añadir otro.`);
+      }
+      if (all.some((m) => sameName(m.name, parsedName))) {
+        throw new Error("Ya existe un miembro con ese nombre (puede estar archivado).");
+      }
+      return db.insert(members).values({ name: parsedName }).returning().get();
+    },
+
+    renameMember(id: number, name: string): void {
+      const parsedId = MemberIdSchema.parse(id);
+      const parsedName = MemberNameSchema.parse(name);
+      const all = db.select().from(members).all();
+      if (!all.some((m) => m.id === parsedId)) throw new Error("Ese miembro no existe.");
+      if (all.some((m) => m.id !== parsedId && sameName(m.name, parsedName))) {
+        throw new Error("Ya existe un miembro con ese nombre (puede estar archivado).");
+      }
+      db.update(members).set({ name: parsedName }).where(eq(members.id, parsedId)).run();
+    },
+
+    /** Archiva o restaura un miembro. Restaurar respeta el máximo de activos. */
+    setMemberArchived(id: number, archived: boolean): void {
+      const parsedId = MemberIdSchema.parse(id);
+      const all = db.select().from(members).all();
+      const target = all.find((m) => m.id === parsedId);
+      if (!target) throw new Error("Ese miembro no existe.");
+      if (!archived && target.archived && all.filter((m) => !m.archived).length >= MAX_MEMBERS) {
+        throw new Error(`Ya hay ${MAX_MEMBERS} miembros activos. Archivá uno para restaurar este.`);
+      }
+      db.update(members).set({ archived }).where(eq(members.id, parsedId)).run();
     },
 
     /** Categorías ya usadas alguna vez para ese tipo, para sugerirlas en el formulario. */

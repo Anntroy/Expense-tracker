@@ -66,6 +66,15 @@ App de escritorio para controlar los ingresos y gastos del mes.
 - `electron/db/repository.test.ts` crea una base **en memoria** (`:memory:`) por test y le aplica las migraciones reales de `electron/db/migrations/`, así que nunca toca los datos de la app y además valida que las migraciones dejan el esquema que el código espera. Cubre centavos↔decimal, filtro por mes (bordes y bisiestos), orden, borrado, desactivar y categorías.
 - Requiere que `better-sqlite3` esté compilado para el Node normal (hoy lo está). Si `electron-rebuild` lo recompila para Electron y `npm test` deja de poder cargarlo, habrá que recompilarlo para Node (p. ej. `npm rebuild better-sqlite3`) y volver a recompilarlo para Electron antes de empaquetar.
 
+## Miembros del hogar («quién»)
+
+- Modelo "tesorería única del hogar": **no hay usuarios ni cuentas**, todos ven todo. Los miembros son solo etiquetas para saber quién pagó (gasto) o cobró (ingreso). Decisión tomada para una unidad familiar donde nadie necesita cuentas privadas; si algún día hiciera falta privacidad entre miembros, habría que pasar a usuarios de verdad (ver el plan de varios usuarios), y el campo `member_id` serviría de base.
+- Tabla `members` (`id` autoincrement, `name`, `archived`) y `transactions.member_id` **opcional** (migración `0002`): los movimientos anteriores quedan "Sin asignar". La migración se prueba sobre una base con datos.
+- Reglas (en `electron/db/repository.ts`, con Zod en `src/lib/schema.ts`): **máximo 5 miembros activos** (`MAX_MEMBERS`; los archivados no cuentan, y restaurar también respeta el máximo), nombre de 1 a 30 caracteres, y **sin nombres repetidos ignorando mayúsculas, incluso si el otro está archivado**. Quitar un miembro es **archivarlo**: deja de poder elegirse pero sus movimientos conservan el nombre. `createTransaction` rechaza un miembro inexistente o archivado.
+- IPC: `members:list`, `members:create`, `members:rename`, `members:setArchived` (expuestos como `window.api.members.*`). Los errores del proceso principal llegan con el prefijo "Error invoking remote method…"; `errorMessage()` (`src/lib/error-message.ts`) lo quita para mostrarlos.
+- UI: botón de engranaje en la cabecera → `SettingsDialog` (`<dialog>` nativo) con alta, renombrado, archivado y restauración. `page.tsx` carga los miembros con el hook `useMembers` y los pasa a `MonthView`. El formulario muestra el selector **Quién** solo si hay miembros activos y recuerda el último usado en este equipo (`localStorage`, clave `expense-tracker:last-member`); la lista muestra el nombre junto a la categoría.
+- **Pendiente de este plan:** fase 2 (totales y filtro por persona, en la pestaña del mes y en la de comparación) y fase 3 (PIN opcional al abrir la app, aplicado en el proceso principal).
+
 ## La vista sigue a la fecha del formulario
 
 - Al elegir una fecha completa en `TransactionForm` (`onDateChange`), `MonthView` cambia al mes de esa fecha y muestra sus movimientos. Al agregar un movimiento cuya fecha cae en otro mes, también pasa a ese mes (`handleAdd`), para que el movimiento nuevo se vea enseguida.

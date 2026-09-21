@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
@@ -33,6 +34,7 @@ function input(overrides: Partial<TransactionInput> = {}): TransactionInput {
     category: "Comida",
     description: "",
     date: "2026-09-10",
+    memberId: null,
     ...overrides,
   };
 }
@@ -221,5 +223,129 @@ describe("listCategories", () => {
 
   it("returns an empty list when nothing was used yet", () => {
     expect(repo.listCategories("expense")).toEqual([]);
+  });
+});
+
+describe("members", () => {
+  it("creates members and lists them in order of creation", () => {
+    repo.createMember("Ana");
+    repo.createMember("Luis");
+    expect(repo.listMembers().map((m) => m.name)).toEqual(["Ana", "Luis"]);
+  });
+
+  it("trims names and rejects empty or too long ones", () => {
+    expect(repo.createMember("  Ana  ").name).toBe("Ana");
+    expect(() => repo.createMember("   ")).toThrow();
+    expect(() => repo.createMember("x".repeat(31))).toThrow();
+  });
+
+  it("does not allow repeated names, ignoring case, even if the other is archived", () => {
+    const ana = repo.createMember("Ana");
+    expect(() => repo.createMember("ana")).toThrow(/ya existe/i);
+    repo.setMemberArchived(ana.id, true);
+    expect(() => repo.createMember("ANA")).toThrow(/ya existe/i);
+  });
+
+  it("allows at most 5 active members", () => {
+    ["A", "B", "C", "D", "E"].forEach((n) => repo.createMember(n));
+    expect(() => repo.createMember("F")).toThrow(/5 miembros/);
+    expect(repo.listMembers()).toHaveLength(5);
+  });
+
+  it("archived members do not count towards the limit, and restoring respects it", () => {
+    const members = ["A", "B", "C", "D", "E"].map((n) => repo.createMember(n));
+    repo.setMemberArchived(members[0].id, true);
+
+    const f = repo.createMember("F"); // hay hueco porque A está archivado
+    expect(f.archived).toBe(false);
+    expect(() => repo.setMemberArchived(members[0].id, false)).toThrow(/5 miembros/);
+
+    repo.setMemberArchived(members[1].id, true);
+    repo.setMemberArchived(members[0].id, false);
+    expect(repo.listMembers().find((m) => m.id === members[0].id)?.archived).toBe(false);
+  });
+
+  it("lists active members first and archived ones last", () => {
+    const a = repo.createMember("A");
+    repo.createMember("B");
+    repo.setMemberArchived(a.id, true);
+    expect(repo.listMembers().map((m) => m.name)).toEqual(["B", "A"]);
+  });
+
+  it("renames a member, but not to a name already taken or for an unknown id", () => {
+    const ana = repo.createMember("Ana");
+    repo.createMember("Luis");
+    repo.renameMember(ana.id, "Anita");
+    expect(repo.listMembers().map((m) => m.name)).toEqual(["Anita", "Luis"]);
+
+    expect(() => repo.renameMember(ana.id, "luis")).toThrow(/ya existe/i);
+    expect(() => repo.renameMember(999, "Nadie")).toThrow(/no existe/i);
+    // Poner su propio nombre (cambiando mayúsculas) sí está permitido.
+    expect(() => repo.renameMember(ana.id, "ANITA")).not.toThrow();
+  });
+
+  it("rejects an unknown id when archiving", () => {
+    expect(() => repo.setMemberArchived(999, true)).toThrow(/no existe/i);
+  });
+});
+
+describe("transactions and members", () => {
+  it("stores who paid and returns it when listing", () => {
+    const ana = repo.createMember("Ana");
+    const created = repo.createTransaction(input({ memberId: ana.id }));
+    expect(created.memberId).toBe(ana.id);
+    expect(repo.listTransactions("2026-09")[0].memberId).toBe(ana.id);
+  });
+
+  it("allows transactions without a member", () => {
+    expect(repo.createTransaction(input()).memberId).toBeNull();
+    expect(repo.createTransaction(input({ memberId: undefined as unknown as null })).memberId).toBeNull();
+  });
+
+  it("rejects an unknown or archived member without writing anything", () => {
+    expect(() => repo.createTransaction(input({ memberId: 999 }))).toThrow(/miembro/i);
+
+    const ana = repo.createMember("Ana");
+    repo.setMemberArchived(ana.id, true);
+    expect(() => repo.createTransaction(input({ memberId: ana.id }))).toThrow(/miembro/i);
+    expect(repo.listTransactions("2026-09")).toEqual([]);
+  });
+
+  it("keeps the member of old transactions after archiving them", () => {
+    const ana = repo.createMember("Ana");
+    repo.createTransaction(input({ memberId: ana.id }));
+    repo.setMemberArchived(ana.id, true);
+    expect(repo.listTransactions("2026-09")[0].memberId).toBe(ana.id);
+  });
+});
+
+describe("migration with existing data", () => {
+  it("keeps existing transactions and leaves them without a member", () => {
+    const old = new Database(":memory:");
+    // Se aplican a mano las migraciones anteriores a los miembros, se guardan datos y
+    // luego se aplica la migración de miembros, como haría la app al actualizarse.
+    const files = readdirSync(migrationsFolder)
+      .filter((f) => f.endsWith(".sql"))
+      .sort();
+    const apply = (file: string) => {
+      const sql = readFileSync(path.join(migrationsFolder, file), "utf8");
+      sql.split("--> statement-breakpoint").forEach((statement) => old.exec(statement));
+    };
+    const membersMigration = files.find((f) => readFileSync(path.join(migrationsFolder, f), "utf8").includes("CREATE TABLE `members`"));
+    expect(membersMigration).toBeDefined();
+
+    files.filter((f) => f < membersMigration!).forEach(apply);
+    old
+      .prepare("insert into transactions (type, amount, category, description, date) values ('expense', 1250, 'Comida', 'Menú', '2026-09-10')")
+      .run();
+    apply(membersMigration!);
+
+    const row = old.prepare("select amount, category, member_id from transactions").get() as {
+      amount: number;
+      category: string;
+      member_id: number | null;
+    };
+    expect(row).toEqual({ amount: 1250, category: "Comida", member_id: null });
+    old.close();
   });
 });

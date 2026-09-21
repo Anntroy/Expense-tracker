@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { MonthRangeSchema, SetExcludedSchema, TransactionInputSchema } from "./schema";
+import {
+  MemberIdSchema,
+  MemberNameSchema,
+  MonthRangeSchema,
+  SetExcludedSchema,
+  TransactionInputSchema,
+} from "./schema";
 
 const valid = {
   type: "expense",
@@ -78,5 +84,35 @@ describe("MonthRangeSchema", () => {
     expect(MonthRangeSchema.safeParse({ from: "2026-13", to: "2026-09" }).success).toBe(false);
     expect(MonthRangeSchema.safeParse({ from: "2026-9", to: "2026-09" }).success).toBe(false);
     expect(MonthRangeSchema.safeParse({ from: "", to: "2026-09" }).success).toBe(false);
+  });
+});
+
+describe("TransactionInputSchema memberId", () => {
+  const base = { type: "expense", amount: 5, category: "Comida", date: "2026-09-10" };
+
+  it("defaults to null (unassigned) when omitted", () => {
+    expect(TransactionInputSchema.parse(base).memberId).toBeNull();
+  });
+
+  it("accepts a positive integer id or null, and rejects anything else", () => {
+    expect(TransactionInputSchema.safeParse({ ...base, memberId: 3 }).success).toBe(true);
+    expect(TransactionInputSchema.safeParse({ ...base, memberId: null }).success).toBe(true);
+    expect(TransactionInputSchema.safeParse({ ...base, memberId: 0 }).success).toBe(false);
+    expect(TransactionInputSchema.safeParse({ ...base, memberId: "1" }).success).toBe(false);
+  });
+});
+
+describe("member schemas", () => {
+  it("MemberNameSchema trims and enforces 1 to 30 characters", () => {
+    expect(MemberNameSchema.parse("  Ana ")).toBe("Ana");
+    expect(MemberNameSchema.safeParse("   ").success).toBe(false);
+    expect(MemberNameSchema.safeParse("x".repeat(30)).success).toBe(true);
+    expect(MemberNameSchema.safeParse("x".repeat(31)).success).toBe(false);
+  });
+
+  it("MemberIdSchema only accepts positive integers", () => {
+    expect(MemberIdSchema.safeParse(2).success).toBe(true);
+    expect(MemberIdSchema.safeParse(0).success).toBe(false);
+    expect(MemberIdSchema.safeParse(1.5).success).toBe(false);
   });
 });

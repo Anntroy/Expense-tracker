@@ -2,8 +2,12 @@ import { ipcMain } from "electron";
 import {
   createTransaction,
   deleteTransaction,
+  createMember,
   listCategories,
+  listMembers,
   listTransactions,
+  renameMember,
+  setMemberArchived,
   setTransactionExcluded,
   summaryByCategory,
 } from "./db/transactions";
@@ -19,5 +23,11 @@ export function registerIpcHandlers() {
     setTransactionExcluded(id, excluded),
   );
   ipcMain.handle("transactions:summary", (_event, range: MonthRange) => summaryByCategory(range));
+  ipcMain.handle("members:list", () => listMembers());
+  ipcMain.handle("members:create", (_event, name: string) => createMember(name));
+  ipcMain.handle("members:rename", (_event, id: number, name: string) => renameMember(id, name));
+  ipcMain.handle("members:setArchived", (_event, id: number, archived: boolean) =>
+    setMemberArchived(id, archived),
+  );
   ipcMain.handle("transactions:categories", (_event, type: TransactionType) => listCategories(type));
 }

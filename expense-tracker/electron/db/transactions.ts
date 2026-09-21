@@ -10,4 +10,8 @@ export const {
   setTransactionExcluded,
   summaryByCategory,
   listCategories,
+  listMembers,
+  createMember,
+  renameMember,
+  setMemberArchived,
 } = createTransactionsRepository(db);

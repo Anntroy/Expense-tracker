@@ -4,7 +4,7 @@ import type { Transaction } from './types'
 
 let nextId = 1
 function tx(type: Transaction['type'], category: string, amount: number, excluded = false): Transaction {
-  return { id: nextId++, type, category, amount, description: '', date: '2026-09-10', excluded }
+  return { id: nextId++, type, category, amount, description: '', date: '2026-09-10', excluded, memberId: null }
 }
 
 describe('expenseTotalsByCategory', () => {

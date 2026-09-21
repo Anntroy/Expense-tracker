@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { CategoryMonthTotal, Transaction, TransactionType } from "../src/lib/types";
+import type { CategoryMonthTotal, Member, Transaction, TransactionType } from "../src/lib/types";
 import type { MonthRange, TransactionInput } from "../src/lib/schema";
 import type { MonthKey } from "../src/lib/date";
 
@@ -16,5 +16,13 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("transactions:summary", range),
     categories: (type: TransactionType): Promise<string[]> =>
       ipcRenderer.invoke("transactions:categories", type),
+  },
+  members: {
+    list: (): Promise<Member[]> => ipcRenderer.invoke("members:list"),
+    create: (name: string): Promise<Member> => ipcRenderer.invoke("members:create", name),
+    rename: (id: number, name: string): Promise<void> =>
+      ipcRenderer.invoke("members:rename", id, name),
+    setArchived: (id: number, archived: boolean): Promise<void> =>
+      ipcRenderer.invoke("members:setArchived", id, archived),
   },
 });

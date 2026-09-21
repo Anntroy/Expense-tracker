@@ -12,6 +12,8 @@ export const TransactionInputSchema = z.object({
     .min(1, { error: "Elegí o escribí una categoría." }),
   description: z.string().max(200).optional().default(""),
   date: z.string().min(1, { error: "Elegí una fecha." }),
+  /** Quién pagó / cobró; `null` = sin asignar. */
+  memberId: z.number().int().positive().nullable().optional().default(null),
 });
 
 export type TransactionInput = z.infer<typeof TransactionInputSchema>;
@@ -34,3 +36,13 @@ export const MonthRangeSchema = z
   });
 
 export type MonthRange = z.infer<typeof MonthRangeSchema>;
+
+export const MAX_MEMBERS = 5;
+
+export const MemberIdSchema = z.number().int().positive();
+
+export const MemberNameSchema = z
+  .string()
+  .trim()
+  .min(1, { error: "Escribí un nombre." })
+  .max(30, { error: "Máximo 30 caracteres." });

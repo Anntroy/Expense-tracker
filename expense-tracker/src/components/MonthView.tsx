@@ -9,7 +9,7 @@ import { TransactionForm } from "@/components/TransactionForm";
 import { TransactionList } from "@/components/TransactionList";
 import type { MonthKey } from "@/lib/date";
 import type { TransactionInput } from "@/lib/schema";
-import type { Transaction } from "@/lib/types";
+import type { Member, Transaction } from "@/lib/types";
 
 function fetchMonth(month: MonthKey): Promise<Transaction[] | null> {
   if (typeof window === "undefined" || !window.api) {
@@ -22,9 +22,11 @@ type Props = {
   month: MonthKey;
   onMonthChange: (month: MonthKey) => void;
   currency: string;
+  /** Todos los miembros del hogar (activos y archivados). */
+  members: Member[];
 };
 
-export function MonthView({ month, onMonthChange, currency }: Props) {
+export function MonthView({ month, onMonthChange, currency, members }: Props) {
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [apiMissing, setApiMissing] = useState(false);
 
@@ -95,13 +97,18 @@ export function MonthView({ month, onMonthChange, currency }: Props) {
         <>
           <SummaryCards income={income} expenses={expenses} balance={balance} currency={currency} />
 
-          <TransactionForm onAdd={handleAdd} onDateChange={showMonthOf} />
+          <TransactionForm
+            onAdd={handleAdd}
+            onDateChange={showMonthOf}
+            members={members.filter((m) => !m.archived)}
+          />
 
           <CategoryDonut transactions={transactions} currency={currency} />
 
           <TransactionList
             transactions={transactions}
             currency={currency}
+            members={members}
             onDelete={handleDelete}
             onToggleExcluded={handleToggleExcluded}
           />

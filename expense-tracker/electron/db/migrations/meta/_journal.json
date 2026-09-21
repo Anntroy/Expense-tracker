@@ -15,6 +15,13 @@
       "when": 1789996357464,
       "tag": "0001_familiar_firestar",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790007611864,
+      "tag": "0002_graceful_colonel_america",
+      "breakpoints": true
     }
   ]
 }

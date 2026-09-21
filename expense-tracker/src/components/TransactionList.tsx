@@ -1,14 +1,18 @@
 import { formatCurrency } from "@/lib/format";
-import type { Transaction } from "@/lib/types";
+import type { Member, Transaction } from "@/lib/types";
 
 type Props = {
   transactions: Transaction[];
   currency: string;
+  /** Todos los miembros (también archivados) para mostrar el nombre de quién pagó. */
+  members?: Member[];
   onDelete: (id: number) => void;
   onToggleExcluded: (id: number, excluded: boolean) => void;
 };
 
-export function TransactionList({ transactions, currency, onDelete, onToggleExcluded }: Props) {
+export function TransactionList({ transactions, currency, members = [], onDelete, onToggleExcluded }: Props) {
+  const memberNames = new Map(members.map((m) => [m.id, m.name]));
+
   if (transactions.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
@@ -25,7 +29,14 @@ export function TransactionList({ transactions, currency, onDelete, onToggleExcl
           className={`flex items-center justify-between gap-4 px-5 py-3 ${t.excluded ? "opacity-50" : ""}`}
         >
           <div>
-            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{t.category}</p>
+            <p className="flex items-center gap-2 text-sm font-medium text-zinc-900 dark:text-zinc-50">
+              {t.category}
+              {t.memberId !== null && memberNames.has(t.memberId) && (
+                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-normal text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                  {memberNames.get(t.memberId)}
+                </span>
+              )}
+            </p>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
               {t.date}
               {t.description && ` · ${t.description}`}

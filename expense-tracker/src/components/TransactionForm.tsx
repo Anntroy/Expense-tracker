@@ -5,6 +5,7 @@ import { TransactionInputSchema, type TransactionInput } from "@/lib/schema";
 import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
+  type Member,
   type TransactionType,
 } from "@/lib/types";
 
@@ -12,7 +13,27 @@ type Props = {
   onAdd: (input: TransactionInput) => void | Promise<void>;
   /** Se llama al elegir una fecha completa, para que la vista pueda mostrar el mes correspondiente. */
   onDateChange?: (date: string) => void;
+  /** Miembros que se pueden elegir (activos). Sin miembros, el campo "Quién" no aparece. */
+  members?: Member[];
 };
+
+const LAST_MEMBER_KEY = "expense-tracker:last-member";
+
+function readLastMember(): string {
+  try {
+    return localStorage.getItem(LAST_MEMBER_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function rememberMember(id: string) {
+  try {
+    localStorage.setItem(LAST_MEMBER_KEY, id);
+  } catch {
+    // Sin localStorage el campo simplemente no recuerda la última elección.
+  }
+}
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
@@ -21,15 +42,20 @@ function fetchCategories(type: TransactionType): Promise<string[]> {
   return window.api.transactions.categories(type);
 }
 
-export function TransactionForm({ onAdd, onDateChange }: Props) {
+export function TransactionForm({ onAdd, onDateChange, members = [] }: Props) {
   const [type, setType] = useState<TransactionType>("expense");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(todayISO());
+  // `null` = todavía no se tocó: se propone el último miembro usado en este equipo.
+  const [chosenMember, setChosenMember] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [usedCategories, setUsedCategories] = useState<string[]>([]);
   const categoryListId = useId();
+
+  const proposedMember = chosenMember ?? readLastMember();
+  const memberValue = members.some((m) => String(m.id) === proposedMember) ? proposedMember : "";
 
   useEffect(() => {
     fetchCategories(type).then(setUsedCategories);
@@ -56,6 +82,7 @@ export function TransactionForm({ onAdd, onDateChange }: Props) {
       category,
       description,
       date,
+      memberId: memberValue === "" ? null : Number(memberValue),
     });
 
     if (!result.success) {
@@ -64,6 +91,8 @@ export function TransactionForm({ onAdd, onDateChange }: Props) {
     }
 
     await onAdd(result.data);
+    setChosenMember(memberValue);
+    rememberMember(memberValue);
     setAmount("");
     setCategory("");
     setDescription("");
@@ -135,6 +164,25 @@ export function TransactionForm({ onAdd, onDateChange }: Props) {
           aria-label="Fecha"
           className="w-36 shrink-0 rounded-md border border-zinc-300 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
         />
+
+        {members.length > 0 && (
+          <select
+            value={memberValue}
+            onChange={(e) => {
+              setChosenMember(e.target.value);
+              setError(null);
+            }}
+            aria-label="Quién"
+            className="w-32 shrink-0 rounded-md border border-zinc-300 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+          >
+            <option value="">Sin asignar</option>
+            {members.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+        )}
 
         <input
           type="text"
