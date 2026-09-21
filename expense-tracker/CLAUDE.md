@@ -28,6 +28,7 @@ App de escritorio para controlar los ingresos y gastos del mes.
 
 - `npm run dev`: levanta Next.js (`localhost:3000`) y Electron en paralelo (`concurrently`); Electron espera a que Next esté listo (`wait-on`) y carga esa URL.
 - `npm run build`: `next build` (export estático a `out/`) + compila `electron/*.ts` a `dist-electron/` + `electron-builder` genera el instalador.
+- `npm test`: corre los tests con Vitest (`vitest.config.mts`, entorno node, alias `@` → `src/`). Los `*.test.ts` viven junto al código que prueban (`src/lib/`) y están excluidos de la compilación de Electron en `electron/tsconfig.json`. `npm run test:watch` para modo watch. Hoy cubren lógica pura (`date`, `category-totals`, `schema`, `chart-colors`); falta la capa de datos (`electron/db/transactions.ts`), ver el aviso sobre `better-sqlite3` más abajo.
 - `npm run db:generate`: corre `drizzle-kit generate` y regenera los archivos `.sql` en `electron/db/migrations/` a partir de `electron/db/schema.ts`. Correr después de cualquier cambio al schema.
 
 ## Base de datos (paso 3, ya implementado)
@@ -62,6 +63,8 @@ App de escritorio para controlar los ingresos y gastos del mes.
 ## Pendiente (no implementado todavía)
 
 - **Comparativa de gastos por categoría entre varios meses.** Decisiones ya tomadas: paneles pequeños (uno por categoría, meses en el eje X, barras con el color fijo de `categoryColor()`), rango de meses libre (elegido por el usuario, no solo presets) y solo gastos. Plan: consulta SQL agrupada por mes y categoría (`summaryByCategory(from, to)`) en `electron/db/transactions.ts` + canal IPC `transactions:summary` con rango validado por Zod compartido, meses vacíos rellenados con 0, y una vista/pestaña "Comparar". Reutilizar `CategoryChart.tsx` como base de los paneles.
+
+- **Tests de la capa de datos (pendiente):** `better-sqlite3` se recompila con `electron-rebuild` para el ABI de Electron, así que puede no cargar bajo el Node de Vitest. Antes de escribir esos tests, comprobar si carga; si no, aislar la lógica (conversión centavos↔decimal, filtro por mes) para probarla sin el módulo nativo.
 
 ## Convenciones
 

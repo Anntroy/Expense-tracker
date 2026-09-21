@@ -11,7 +11,9 @@
     "build:next": "next build",
     "build:electron": "tsc -p electron/tsconfig.json && node -e \"const fs=require('fs'); if (fs.existsSync('electron/db/migrations')) fs.cpSync('electron/db/migrations','dist-electron/electron/db/migrations',{recursive:true})\"",
     "db:generate": "drizzle-kit generate",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
@@ -25,7 +27,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^20",
+    "@types/node": "^22.20.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "concurrently": "^10.0.5",
@@ -37,6 +39,7 @@
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
     "typescript": "^5",
+    "vitest": "^5.0.1",
     "wait-on": "^9.1.0"
   }
 }

@@ -10,5 +10,6 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["*.ts", "db/**/*.ts", "../src/lib/**/*.ts"]
+  "include": ["*.ts", "db/**/*.ts", "../src/lib/**/*.ts"],
+  "exclude": ["../src/**/*.test.ts"]
 }
