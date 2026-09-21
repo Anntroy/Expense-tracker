@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { monthCount } from "./date";
-import { CURRENCIES } from "./types";
+import { CURRENCIES, TRANSACTION_TYPES } from "./types";
 
 export const TransactionInputSchema = z.object({
-  type: z.enum(["income", "expense"]),
+  type: z.enum(TRANSACTION_TYPES),
   amount: z
     .number({ error: "La cantidad debe ser un número." })
     .positive({ error: "La cantidad debe ser mayor a 0." }),

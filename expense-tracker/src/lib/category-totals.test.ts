@@ -21,6 +21,11 @@ describe('expenseTotalsByCategory', () => {
     expect(result).toEqual([{ category: 'Ocio', amount: 30 }])
   })
 
+  it('ignores savings: they are not expenses', () => {
+    const result = expenseTotalsByCategory([tx('saving', 'Vacaciones', 200), tx('expense', 'Ocio', 30)])
+    expect(result).toEqual([{ category: 'Ocio', amount: 30 }])
+  })
+
   it('ignores excluded (deactivated) expenses', () => {
     const result = expenseTotalsByCategory([tx('expense', 'Ocio', 30), tx('expense', 'Ocio', 100, true), tx('expense', 'Comida', 50, true)])
     expect(result).toEqual([{ category: 'Ocio', amount: 30 }])

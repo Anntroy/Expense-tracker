@@ -392,3 +392,45 @@ describe("migration with existing data", () => {
     old.close();
   });
 });
+
+describe("savings", () => {
+  it("stores a saving with the same cents conversion as other types", () => {
+    const created = repo.createTransaction(input({ type: "saving", category: "Vacaciones", amount: 150.75 }));
+    expect(created).toMatchObject({ type: "saving", amount: 150.75, category: "Vacaciones" });
+    const raw = sqlite.prepare("select type, amount from transactions where id = ?").get(created.id);
+    expect(raw).toEqual({ type: "saving", amount: 15075 });
+  });
+
+  it("appears in the month list next to income and expenses", () => {
+    repo.createTransaction(input({ type: "income", category: "Salario" }));
+    repo.createTransaction(input({ type: "expense" }));
+    repo.createTransaction(input({ type: "saving", category: "Vacaciones" }));
+    expect(repo.listTransactions("2026-09").map((t) => t.type).sort()).toEqual(["expense", "income", "saving"]);
+  });
+
+  it("is not counted as an expense in the per-category summary", () => {
+    repo.createTransaction(input({ type: "saving", category: "Vacaciones", amount: 500 }));
+    repo.createTransaction(input({ type: "expense", category: "Comida", amount: 20 }));
+    expect(repo.summaryByCategory({ from: "2026-09", to: "2026-09" })).toEqual([
+      { month: "2026-09", category: "Comida", amount: 20 },
+    ]);
+  });
+
+  it("keeps its own categories apart from income and expenses", () => {
+    repo.createTransaction(input({ type: "saving", category: "Fondo de emergencia" }));
+    repo.createTransaction(input({ type: "expense", category: "Comida" }));
+    expect(repo.listCategories("saving")).toEqual(["Fondo de emergencia"]);
+    expect(repo.listCategories("expense")).toEqual(["Comida"]);
+  });
+
+  it("can be deactivated like any other transaction", () => {
+    const saving = repo.createTransaction(input({ type: "saving", category: "Vacaciones" }));
+    repo.setTransactionExcluded(saving.id, true);
+    expect(repo.listTransactions("2026-09")[0].excluded).toBe(true);
+  });
+
+  it("can be assigned to a member", () => {
+    const ana = repo.createMember("Ana");
+    expect(repo.createTransaction(input({ type: "saving", memberId: ana.id })).memberId).toBe(ana.id);
+  });
+});

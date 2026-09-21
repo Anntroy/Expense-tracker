@@ -17,7 +17,7 @@ App de escritorio para controlar los ingresos y gastos del mes.
 
 ## Alcance v1
 
-- Registrar ingresos y gastos (monto, tipo, categoría, fecha, descripción).
+- Registrar ingresos, gastos y ahorro (monto, tipo, categoría, fecha, descripción).
 - Balance y resumen del mes (total ingresos, total gastos, balance).
 - Gráficos por categoría.
 - Moneda: **una sola moneda configurable** (elegida una vez en Configuración, ej. EUR, USD). Todos los movimientos y totales se muestran en esa moneda. No hay conversión entre monedas ni tasas de cambio — si el usuario cambia la moneda, solo cambia el formato/símbolo con el que se muestran los montos ya guardados.
@@ -65,6 +65,14 @@ App de escritorio para controlar los ingresos y gastos del mes.
 - La lógica de acceso a datos vive en `electron/db/repository.ts` (`createTransactionsRepository(db)`), que **recibe la base como parámetro** y no importa nada de Electron. `electron/db/transactions.ts` es solo el enlace con la base real (`client.ts`) y re-exporta las funciones; `ipc.ts` lo sigue importando igual. Cualquier operación nueva de datos va en `repository.ts`.
 - `electron/db/repository.test.ts` crea una base **en memoria** (`:memory:`) por test y le aplica las migraciones reales de `electron/db/migrations/`, así que nunca toca los datos de la app y además valida que las migraciones dejan el esquema que el código espera. Cubre centavos↔decimal, filtro por mes (bordes y bisiestos), orden, borrado, desactivar y categorías.
 - Requiere que `better-sqlite3` esté compilado para el Node normal (hoy lo está). Si `electron-rebuild` lo recompila para Electron y `npm test` deja de poder cargarlo, habrá que recompilarlo para Node (p. ej. `npm rebuild better-sqlite3`) y volver a recompilarlo para Electron antes de empaquetar.
+
+## Ahorro como tercer tipo de movimiento
+
+- `TransactionType` es `'income' | 'expense' | 'saving'` (`TRANSACTION_TYPES` en `src/lib/types.ts`, usado también por Zod). **No hizo falta migración**: en SQLite la columna `type` es texto sin restricción y el `enum` de `schema.ts` solo existe en TypeScript, así que los datos anteriores siguen igual.
+- **Cómo cuenta el ahorro:** es dinero que se aparta, no un gasto. El resumen del mes tiene una tarjeta **Ahorro** propia y **Balance = ingresos − gastos − ahorro** (la tarjeta avisa "Tras descontar el ahorro" cuando hay ahorro). Si en algún momento se prefiere que el ahorro no reste del balance, el cálculo está en `MonthView.tsx`.
+- **No entra en el donut ni en la comparación por categoría**: `expenseTotalsByCategory` y `summaryByCategory` siguen siendo solo de gastos. (Comparar el ahorro por meses no está hecho.) Sí respeta el filtro por persona, el botón de desactivar y los miembros como cualquier movimiento.
+- **Formulario:** el interruptor de dos posiciones se sustituyó por un selector de tres opciones (`role="radiogroup"`: Ingreso / Gasto / Ahorro). Categorías fijas del ahorro: `SAVING_CATEGORIES` (Fondo de emergencia, Vacaciones, Jubilación, Otros), más las que se hayan escrito antes (`listCategories('saving')`).
+- **Lista:** el ahorro va en azul, sin signo `+`/`-`, y con una etiqueta "Ahorro" junto a la categoría para no depender solo del color.
 
 ## Miembros del hogar («quién»)
 

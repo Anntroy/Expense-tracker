@@ -5,6 +5,7 @@ import { TransactionInputSchema, type TransactionInput } from "@/lib/schema";
 import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
+  SAVING_CATEGORIES,
   type Member,
   type TransactionType,
 } from "@/lib/types";
@@ -15,6 +16,18 @@ type Props = {
   onDateChange?: (date: string) => void;
   /** Miembros que se pueden elegir (activos). Sin miembros, el campo "Quién" no aparece. */
   members?: Member[];
+};
+
+const TYPE_OPTIONS: { value: TransactionType; label: string; active: string }[] = [
+  { value: "income", label: "Ingreso", active: "bg-emerald-600 text-white" },
+  { value: "expense", label: "Gasto", active: "bg-red-600 text-white" },
+  { value: "saving", label: "Ahorro", active: "bg-sky-600 text-white" },
+];
+
+const CATEGORIES_BY_TYPE: Record<TransactionType, string[]> = {
+  income: INCOME_CATEGORIES,
+  expense: EXPENSE_CATEGORIES,
+  saving: SAVING_CATEGORIES,
 };
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -47,7 +60,7 @@ export function TransactionForm({ onAdd, onDateChange, members = [] }: Props) {
   }, [type]);
 
   const categories = useMemo(() => {
-    const base = type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+    const base = CATEGORIES_BY_TYPE[type];
     const extra = usedCategories.filter((c) => !base.includes(c));
     return [...base, ...extra];
   }, [type, usedCategories]);
@@ -90,37 +103,28 @@ export function TransactionForm({ onAdd, onDateChange, members = [] }: Props) {
       className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
     >
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          role="switch"
-          aria-checked={type === "income"}
+        <div
+          role="radiogroup"
           aria-label="Tipo de movimiento"
-          onClick={() =>
-            handleTypeChange(type === "income" ? "expense" : "income")
-          }
-          className="flex w-24 shrink-0 items-center gap-2 py-2 text-sm font-medium"
+          className="flex shrink-0 rounded-md border border-zinc-300 p-0.5 dark:border-zinc-700"
         >
-          <span
-            className={`relative inline-block h-5 w-9 shrink-0 rounded-full transition-colors ${
-              type === "income" ? "bg-emerald-600" : "bg-red-600"
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
-                type === "income" ? "translate-x-4" : ""
+          {TYPE_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={type === option.value}
+              onClick={() => handleTypeChange(option.value)}
+              className={`rounded px-2.5 py-1.5 text-sm font-medium transition-colors ${
+                type === option.value
+                  ? option.active
+                  : "text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
               }`}
-            />
-          </span>
-          <span
-            className={
-              type === "income"
-                ? "text-emerald-700 dark:text-emerald-400"
-                : "text-red-700 dark:text-red-400"
-            }
-          >
-            {type === "income" ? "Ingreso" : "Gasto"}
-          </span>
-        </button>
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
 
         <input
           type="number"

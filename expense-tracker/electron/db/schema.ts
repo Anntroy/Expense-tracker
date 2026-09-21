@@ -11,7 +11,7 @@ export const members = sqliteTable("members", {
 
 export const transactions = sqliteTable("transactions", {
   id: integer().primaryKey({ autoIncrement: true }),
-  type: text({ enum: ["income", "expense"] }).notNull(),
+  type: text({ enum: ["income", "expense", "saving"] }).notNull(),
   // Guardado en centavos (ej. 12,50 € -> 1250) para evitar errores de
   // redondeo de punto flotante. La conversión a/desde decimal se hace
   // en la capa que consume esta tabla, no acá.

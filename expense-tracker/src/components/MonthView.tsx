@@ -53,16 +53,16 @@ export function MonthView({ month, onMonthChange, currency, members }: Props) {
     [transactions, person],
   );
 
-  const { income, expenses, balance } = useMemo(() => {
+  const { income, expenses, savings, balance } = useMemo(() => {
     // Los movimientos desactivados no cuentan en el recuento.
     const list = visible.filter((t) => !t.excluded);
-    const income = list
-      .filter((t) => t.type === "income")
-      .reduce((sum, t) => sum + t.amount, 0);
-    const expenses = list
-      .filter((t) => t.type === "expense")
-      .reduce((sum, t) => sum + t.amount, 0);
-    return { income, expenses, balance: income - expenses };
+    const total = (type: Transaction["type"]) =>
+      list.filter((t) => t.type === type).reduce((sum, t) => sum + t.amount, 0);
+    const income = total("income");
+    const expenses = total("expense");
+    const savings = total("saving");
+    // El ahorro es dinero apartado: no es un gasto, pero tampoco queda disponible.
+    return { income, expenses, savings, balance: income - expenses - savings };
   }, [visible]);
 
   // Muestra el mes al que pertenece una fecha ("YYYY-MM-DD" -> "YYYY-MM").
@@ -118,7 +118,13 @@ export function MonthView({ month, onMonthChange, currency, members }: Props) {
             </label>
           )}
 
-          <SummaryCards income={income} expenses={expenses} balance={balance} currency={currency} />
+          <SummaryCards
+            income={income}
+            expenses={expenses}
+            savings={savings}
+            balance={balance}
+            currency={currency}
+          />
 
           <TransactionForm
             onAdd={handleAdd}

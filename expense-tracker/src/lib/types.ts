@@ -1,4 +1,6 @@
-export type TransactionType = 'income' | 'expense'
+export const TRANSACTION_TYPES = ['income', 'expense', 'saving'] as const
+/** Ingreso, gasto o ahorro (dinero que se aparta: no es un gasto, pero tampoco queda disponible). */
+export type TransactionType = (typeof TRANSACTION_TYPES)[number]
 
 export interface Transaction {
   id: number
@@ -19,6 +21,8 @@ export type Currency = (typeof CURRENCIES)[number]
 export const EXPENSE_CATEGORIES = ['Vivienda', 'Comida', 'Transporte', 'Ocio', 'Salud', 'Otros']
 
 export const INCOME_CATEGORIES = ['Salario', 'Bizum', 'Inversión', 'Otros']
+
+export const SAVING_CATEGORIES = ['Fondo de emergencia', 'Vacaciones', 'Jubilación', 'Otros']
 
 /** Gasto total de una categoría en un mes (ya en decimal). */
 export type CategoryMonthTotal = { month: string; category: string; amount: number }

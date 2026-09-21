@@ -138,3 +138,18 @@ describe("CurrencySchema", () => {
     expect(CurrencySchema.safeParse("JPY").success).toBe(false);
   });
 });
+
+describe("transaction types", () => {
+  const base = { amount: 100, category: "Vacaciones", date: "2026-09-10" };
+
+  it("accepts income, expense and saving", () => {
+    for (const type of ["income", "expense", "saving"]) {
+      expect(TransactionInputSchema.safeParse({ ...base, type }).success).toBe(true);
+    }
+  });
+
+  it("rejects any other type", () => {
+    expect(TransactionInputSchema.safeParse({ ...base, type: "transfer" }).success).toBe(false);
+    expect(TransactionInputSchema.safeParse({ ...base, type: "savings" }).success).toBe(false);
+  });
+});

@@ -1,6 +1,14 @@
 import { formatCurrency } from "@/lib/format";
 import type { Member, Transaction } from "@/lib/types";
 
+// Ingreso suma (+), gasto resta (-) y ahorro es dinero apartado: sin signo, y con su propia
+// etiqueta junto a la categoría para que no dependa solo del color.
+const AMOUNT_STYLE: Record<Transaction["type"], { sign: string; color: string }> = {
+  income: { sign: "+", color: "text-emerald-600 dark:text-emerald-400" },
+  expense: { sign: "-", color: "text-red-600 dark:text-red-400" },
+  saving: { sign: "", color: "text-sky-600 dark:text-sky-400" },
+};
+
 type Props = {
   transactions: Transaction[];
   currency: string;
@@ -33,6 +41,11 @@ export function TransactionList({ transactions, currency, members = [], emptyMes
           <div>
             <p className="flex items-center gap-2 text-sm font-medium text-zinc-900 dark:text-zinc-50">
               {t.category}
+              {t.type === "saving" && (
+                <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-normal text-sky-700 dark:bg-sky-950 dark:text-sky-300">
+                  Ahorro
+                </span>
+              )}
               {t.memberId !== null && memberNames.has(t.memberId) && (
                 <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-normal text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                   {memberNames.get(t.memberId)}
@@ -46,13 +59,9 @@ export function TransactionList({ transactions, currency, members = [], emptyMes
           </div>
           <div className="flex items-center gap-3">
             <span
-              className={`text-sm font-semibold ${t.excluded ? "line-through " : ""}${
-                t.type === "income"
-                  ? "text-emerald-600 dark:text-emerald-400"
-                  : "text-red-600 dark:text-red-400"
-              }`}
+              className={`text-sm font-semibold ${t.excluded ? "line-through " : ""}${AMOUNT_STYLE[t.type].color}`}
             >
-              {t.type === "income" ? "+" : "-"}
+              {AMOUNT_STYLE[t.type].sign}
               {formatCurrency(t.amount, currency)}
             </span>
             <button
