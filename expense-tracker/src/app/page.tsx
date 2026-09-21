@@ -1,34 +1,40 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { CategoryDonut } from "@/components/CategoryDonut";
+import { MonthNav } from "@/components/MonthNav";
 import { SummaryCards } from "@/components/SummaryCards";
 import { TransactionForm } from "@/components/TransactionForm";
 import { TransactionList } from "@/components/TransactionList";
+import { currentMonthKey, formatMonthLabel, type MonthKey } from "@/lib/date";
 import { CURRENCIES, type Currency, type Transaction } from "@/lib/types";
+
+function fetchMonth(month: MonthKey): Promise<Transaction[] | null> {
+  if (typeof window === "undefined" || !window.api) {
+    return Promise.resolve(null);
+  }
+  return window.api.transactions.list(month);
+}
 
 export default function Home() {
   const [currency, setCurrency] = useState<Currency>("EUR");
+  const [month, setMonth] = useState<MonthKey>(() => currentMonthKey());
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [apiMissing, setApiMissing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
-      if (typeof window === "undefined" || !window.api) {
-        if (!cancelled) setApiMissing(true);
-        return;
-      }
-      const list = await window.api.transactions.list();
-      if (!cancelled) setTransactions(list);
-    }
-
-    load();
+    fetchMonth(month).then((list) => {
+      if (cancelled) return;
+      if (list === null) setApiMissing(true);
+      else setTransactions(list);
+    });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [month]);
 
   const { income, expenses, balance } = useMemo(() => {
     const list = transactions ?? [];
@@ -42,19 +48,16 @@ export default function Home() {
   }, [transactions]);
 
   async function handleAdd(input: Omit<Transaction, "id">) {
-    const created = await window.api.transactions.create(input);
-    setTransactions((prev) => [created, ...(prev ?? [])]);
+    await window.api.transactions.create(input);
+    const list = await fetchMonth(month);
+    if (list) setTransactions(list);
   }
 
   async function handleDelete(id: number) {
     await window.api.transactions.delete(id);
-    setTransactions((prev) => (prev ?? []).filter((t) => t.id !== id));
+    const list = await fetchMonth(month);
+    if (list) setTransactions(list);
   }
-
-  const monthLabel = new Intl.DateTimeFormat("es-ES", {
-    month: "long",
-    year: "numeric",
-  }).format(new Date());
 
   return (
     <div className="min-h-full flex-1 bg-zinc-50 dark:bg-black">
@@ -64,7 +67,9 @@ export default function Home() {
             <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
               Ingresos y gastos
             </h1>
-            <p className="text-sm capitalize text-zinc-500 dark:text-zinc-400">{monthLabel}</p>
+            <p className="text-sm capitalize text-zinc-500 dark:text-zinc-400">
+              {formatMonthLabel(month)}
+            </p>
           </div>
           <label className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
             Moneda
@@ -81,6 +86,8 @@ export default function Home() {
             </select>
           </label>
         </header>
+
+        <MonthNav month={month} onChange={setMonth} />
 
         {apiMissing ? (
           <p className="rounded-lg border border-dashed border-amber-400 bg-amber-50 p-6 text-center text-sm text-amber-800 dark:border-amber-600 dark:bg-amber-950 dark:text-amber-200">
@@ -100,6 +107,8 @@ export default function Home() {
             />
 
             <TransactionForm onAdd={handleAdd} />
+
+            <CategoryDonut transactions={transactions} currency={currency} />
 
             <TransactionList
               transactions={transactions}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
 import { TransactionInputSchema } from "@/lib/schema";
 import {
   EXPENSE_CATEGORIES,
@@ -10,10 +10,15 @@ import {
 } from "@/lib/types";
 
 type Props = {
-  onAdd: (input: Omit<Transaction, "id">) => void;
+  onAdd: (input: Omit<Transaction, "id">) => void | Promise<void>;
 };
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
+
+function fetchCategories(type: TransactionType): Promise<string[]> {
+  if (typeof window === "undefined" || !window.api) return Promise.resolve([]);
+  return window.api.transactions.categories(type);
+}
 
 export function TransactionForm({ onAdd }: Props) {
   const [type, setType] = useState<TransactionType>("expense");
@@ -22,8 +27,18 @@ export function TransactionForm({ onAdd }: Props) {
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(todayISO());
   const [error, setError] = useState<string | null>(null);
+  const [usedCategories, setUsedCategories] = useState<string[]>([]);
+  const categoryListId = useId();
 
-  const categories = type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+  useEffect(() => {
+    fetchCategories(type).then(setUsedCategories);
+  }, [type]);
+
+  const categories = useMemo(() => {
+    const base = type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+    const extra = usedCategories.filter((c) => !base.includes(c));
+    return [...base, ...extra];
+  }, [type, usedCategories]);
 
   function handleTypeChange(next: TransactionType) {
     setType(next);
@@ -31,7 +46,7 @@ export function TransactionForm({ onAdd }: Props) {
     setError(null);
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
     const result = TransactionInputSchema.safeParse({
@@ -47,110 +62,113 @@ export function TransactionForm({ onAdd }: Props) {
       return;
     }
 
-    onAdd(result.data);
+    await onAdd(result.data);
     setAmount("");
+    setCategory("");
     setDescription("");
     setError(null);
+    fetchCategories(type).then(setUsedCategories);
   }
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-4 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"
+      className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
     >
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          onClick={() => handleTypeChange("expense")}
-          className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-            type === "expense"
-              ? "bg-red-600 text-white"
-              : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-          }`}
+          role="switch"
+          aria-checked={type === "income"}
+          aria-label="Tipo de movimiento"
+          onClick={() =>
+            handleTypeChange(type === "income" ? "expense" : "income")
+          }
+          className="flex w-24 shrink-0 items-center gap-2 py-2 text-sm font-medium"
         >
-          Gasto
+          <span
+            className={`relative inline-block h-5 w-9 shrink-0 rounded-full transition-colors ${
+              type === "income" ? "bg-emerald-600" : "bg-red-600"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+                type === "income" ? "translate-x-4" : ""
+              }`}
+            />
+          </span>
+          <span
+            className={
+              type === "income"
+                ? "text-emerald-700 dark:text-emerald-400"
+                : "text-red-700 dark:text-red-400"
+            }
+          >
+            {type === "income" ? "Ingreso" : "Gasto"}
+          </span>
         </button>
-        <button
-          type="button"
-          onClick={() => handleTypeChange("income")}
-          className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-            type === "income"
-              ? "bg-emerald-600 text-white"
-              : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-          }`}
-        >
-          Ingreso
-        </button>
-      </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
-          Cantidad
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={amount}
-            onChange={(e) => {
-              setAmount(e.target.value);
-              setError(null);
-            }}
-            placeholder="0.00"
-            className="rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
-          Fecha
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => {
-              setDate(e.target.value);
-              setError(null);
-            }}
-            className="rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
-          />
-        </label>
-      </div>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          value={amount}
+          onChange={(e) => {
+            setAmount(e.target.value);
+            setError(null);
+          }}
+          placeholder="Cantidad"
+          aria-label="Cantidad"
+          className="w-24 shrink-0 rounded-md border border-zinc-300 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+        />
 
-      <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
-        Categoría
-        <select
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => {
+            setDate(e.target.value);
+            setError(null);
+          }}
+          aria-label="Fecha"
+          className="w-36 shrink-0 rounded-md border border-zinc-300 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+        />
+
+        <input
+          type="text"
+          list={categoryListId}
           value={category}
           onChange={(e) => {
             setCategory(e.target.value);
             setError(null);
           }}
-          className="rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
-        >
-          <option value="">Elegí una categoría</option>
+          placeholder="Categoría"
+          aria-label="Categoría"
+          className="min-w-[8rem] flex-1 rounded-md border border-zinc-300 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+        />
+        <datalist id={categoryListId}>
           {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
+            <option key={c} value={c} />
           ))}
-        </select>
-      </label>
+        </datalist>
 
-      <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
-        Descripción (opcional)
         <input
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Ej: supermercado"
-          className="rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+          placeholder="Descripción (opcional)"
+          aria-label="Descripción"
+          className="min-w-[10rem] flex-1 rounded-md border border-zinc-300 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
         />
-      </label>
+
+        <button
+          type="submit"
+          className="shrink-0 rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+        >
+          Agregar
+        </button>
+      </div>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-
-      <button
-        type="submit"
-        className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
-      >
-        Agregar movimiento
-      </button>
     </form>
   );
 }
