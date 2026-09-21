@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { ApiMissingNotice } from "@/components/ApiMissingNotice";
 import { CategoryDonut } from "@/components/CategoryDonut";
-import { MemberBreakdown } from "@/components/MemberBreakdown";
 import { MonthNav } from "@/components/MonthNav";
+import { PersonSelect } from "@/components/PersonSelect";
 import { SummaryCards } from "@/components/SummaryCards";
 import { TransactionForm } from "@/components/TransactionForm";
 import { TransactionList } from "@/components/TransactionList";
 import type { MonthKey } from "@/lib/date";
-import { ALL_PEOPLE, matchesPerson, personLabel, type PersonFilter } from "@/lib/member-totals";
+import { ALL_PEOPLE, matchesPerson, type PersonFilter } from "@/lib/member-totals";
 import type { TransactionInput } from "@/lib/schema";
 import type { Member, Transaction } from "@/lib/types";
 
@@ -106,32 +106,19 @@ export function MonthView({ month, onMonthChange, currency, members }: Props) {
         <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">Cargando…</p>
       ) : (
         <>
-          {person !== ALL_PEOPLE && (
-            <p className="flex items-center justify-between gap-2 rounded-lg bg-zinc-100 px-4 py-2 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-              <span>
-                Mostrando solo: <strong>{personLabel(person, members)}</strong>
-              </span>
-              <button
-                type="button"
-                onClick={() => setPerson(ALL_PEOPLE)}
-                className="text-xs font-medium underline underline-offset-2 hover:text-zinc-900 dark:hover:text-zinc-50"
-              >
-                Quitar filtro
-              </button>
-            </p>
+          {members.length > 0 && (
+            <label className="flex items-center justify-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+              Persona
+              <PersonSelect
+                value={person}
+                onChange={setPerson}
+                members={members}
+                className={person !== ALL_PEOPLE ? "border-zinc-900 dark:border-zinc-300" : ""}
+              />
+            </label>
           )}
 
           <SummaryCards income={income} expenses={expenses} balance={balance} currency={currency} />
-
-          {members.length > 0 && (
-            <MemberBreakdown
-              transactions={transactions}
-              members={members}
-              currency={currency}
-              filter={person}
-              onFilterChange={setPerson}
-            />
-          )}
 
           <TransactionForm
             onAdd={handleAdd}
