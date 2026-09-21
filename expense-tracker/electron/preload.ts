@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld("api", {
     create: (input: TransactionInput): Promise<Transaction> =>
       ipcRenderer.invoke("transactions:create", input),
     delete: (id: number): Promise<void> => ipcRenderer.invoke("transactions:delete", id),
+    setExcluded: (id: number, excluded: boolean): Promise<void> =>
+      ipcRenderer.invoke("transactions:setExcluded", id, excluded),
     categories: (type: TransactionType): Promise<string[]> =>
       ipcRenderer.invoke("transactions:categories", type),
   },

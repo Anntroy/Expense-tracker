@@ -14,3 +14,8 @@ export const TransactionInputSchema = z.object({
 });
 
 export type TransactionInput = z.infer<typeof TransactionInputSchema>;
+
+export const SetExcludedSchema = z.object({
+  id: z.number().int().positive(),
+  excluded: z.boolean(),
+});

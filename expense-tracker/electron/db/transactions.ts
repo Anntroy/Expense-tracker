@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, lte } from "drizzle-orm";
 import { db } from "./client";
 import { transactions } from "./schema";
-import { TransactionInputSchema, type TransactionInput } from "../../src/lib/schema";
+import { SetExcludedSchema, TransactionInputSchema, type TransactionInput } from "../../src/lib/schema";
 import { monthDateRange, type MonthKey } from "../../src/lib/date";
 import type { Transaction, TransactionType } from "../../src/lib/types";
 
@@ -13,6 +13,7 @@ function toPublic(row: typeof transactions.$inferSelect): Transaction {
     category: row.category,
     description: row.description,
     date: row.date,
+    excluded: row.excluded,
   };
 }
 
@@ -45,6 +46,15 @@ export function createTransaction(input: TransactionInput): Transaction {
 
 export function deleteTransaction(id: number): void {
   db.delete(transactions).where(eq(transactions.id, id)).run();
+}
+
+/** Activa o desactiva un movimiento: desactivado no cuenta en totales ni gráficos. */
+export function setTransactionExcluded(id: number, excluded: boolean): void {
+  const parsed = SetExcludedSchema.parse({ id, excluded });
+  db.update(transactions)
+    .set({ excluded: parsed.excluded })
+    .where(eq(transactions.id, parsed.id))
+    .run();
 }
 
 /** Categorías ya usadas alguna vez para ese tipo, para sugerirlas en el formulario. */

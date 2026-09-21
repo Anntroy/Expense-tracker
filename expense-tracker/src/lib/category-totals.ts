@@ -6,7 +6,7 @@ export type CategoryTotal = { category: string; amount: number };
 export function expenseTotalsByCategory(transactions: Transaction[]): CategoryTotal[] {
   const totals = new Map<string, number>();
   for (const t of transactions) {
-    if (t.type !== "expense") continue;
+    if (t.type !== "expense" || t.excluded) continue;
     totals.set(t.category, (totals.get(t.category) ?? 0) + t.amount);
   }
   return Array.from(totals, ([category, amount]) => ({ category, amount })).sort(

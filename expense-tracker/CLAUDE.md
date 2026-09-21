@@ -33,7 +33,7 @@ App de escritorio para controlar los ingresos y gastos del mes.
 
 ## Base de datos (paso 3, ya implementado)
 
-- `electron/db/schema.ts`: la tabla `transactions` (`id` autoincrement, `type`, `amount`, `category`, `description`, `date`). **El monto se guarda en centavos (integer)**, no en decimal, para evitar errores de redondeo de punto flotante — la conversión centavos↔decimal se hace en la capa que consuma esta tabla (paso 4).
+- `electron/db/schema.ts`: la tabla `transactions` (`id` autoincrement, `type`, `amount`, `category`, `description`, `date`, `excluded`). **El monto se guarda en centavos (integer)**, no en decimal, para evitar errores de redondeo de punto flotante — la conversión centavos↔decimal se hace en la capa que consuma esta tabla (paso 4).
 - `electron/db/migrations/`: migraciones SQL generadas por `drizzle-kit`, se commitean al repo (son el historial versionado del esquema).
 - `electron/db/client.ts`: abre `expense-tracker.db` en `app.getPath('userData')` y corre las migraciones pendientes (`runMigrations()`, llamado desde `electron/main.ts` en `app.whenReady()`).
 - `build:electron` copia `electron/db/migrations/**` a `dist-electron/electron/db/migrations/` para que el `migrate()` en runtime las encuentre al lado del JS compilado, tanto en dev como una vez empaquetada la app.
@@ -59,6 +59,12 @@ App de escritorio para controlar los ingresos y gastos del mes.
 - `src/components/CategoryDonut.tsx`: gráfico redondo (donut) con el porcentaje de cada categoría sobre el total de gastos del mes, debajo del gráfico de barras. Usa `categoryColor()` (mismos colores que las barras), el total en el centro y una leyenda con monto y porcentaje por categoría (así la identidad no depende solo del color). El agrupado por categoría está compartido con `CategoryChart` en `src/lib/category-totals.ts`.
 - Nota de Recharts: `<LabelList>` no aparece hasta que termina la animación de entrada de la barra (~1.5s) — es comportamiento normal de la librería, no un bug.
 - **Categorías propias:** el campo Categoría de `TransactionForm` es un `<input list="...">` (combobox nativo con `<datalist>`), no un `<select>` cerrado — el usuario puede elegir una sugerida o escribir cualquier texto nuevo. `category` en la base ya era `text()` libre, sin `enum`, así que no hizo falta tocar el schema de SQLite. Las sugerencias combinan las categorías fijas con las que ya se usaron antes (`listCategories`/`transactions:categories`), y se refrescan después de cada alta para que una categoría recién escrita quede disponible enseguida. Una categoría fuera de las 6 fijas recibe un color propio y estable: `categoryColor()` le asigna el siguiente de una secuencia HSL (matiz avanzando el ángulo áureo, saturación/luminosidad de `--extra-s`/`--extra-l` según tema), y guarda la asignación en `localStorage` (`expense-tracker:category-colors`) para que no cambie entre sesiones. Ojo: estos colores generados no pasaron por `validate_palette.js` (la skill de dataviz desaconseja hues nuevos), pedido explícito del usuario; los labels en cada barra siguen dando el "relief".
+
+## Desactivar movimientos
+
+- La tabla `transactions` tiene la columna `excluded` (boolean, `default false`, migración `0001`). Un movimiento desactivado **se conserva y se sigue viendo en la lista** (atenuado y con el monto tachado), pero **no cuenta** en el resumen del mes (`page.tsx` lo filtra antes de sumar) ni en el donut (`expenseTotalsByCategory` lo ignora).
+- Botón de "ojo" al lado del de borrar en `TransactionList`: llama a `window.api.transactions.setExcluded(id, excluded)` → canal IPC `transactions:setExcluded` → `setTransactionExcluded` en `electron/db/transactions.ts`, que valida con `SetExcludedSchema` (Zod, en `src/lib/schema.ts`). Se fija el valor explícito (no un toggle en SQL) para que sea determinista.
+- Cualquier cálculo futuro de totales (p. ej. la comparativa entre meses) debe respetar `excluded`.
 
 ## Pendiente (no implementado todavía)
 

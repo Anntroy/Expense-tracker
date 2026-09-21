@@ -10,4 +10,7 @@ export const transactions = sqliteTable("transactions", {
   category: text().notNull(),
   description: text().notNull().default(""),
   date: text().notNull(),
+  // Un movimiento desactivado se conserva pero no cuenta en los totales ni en
+  // los gráficos.
+  excluded: integer({ mode: "boolean" }).notNull().default(false),
 });

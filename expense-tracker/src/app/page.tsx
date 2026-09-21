@@ -7,6 +7,7 @@ import { SummaryCards } from "@/components/SummaryCards";
 import { TransactionForm } from "@/components/TransactionForm";
 import { TransactionList } from "@/components/TransactionList";
 import { currentMonthKey, formatMonthLabel, type MonthKey } from "@/lib/date";
+import type { TransactionInput } from "@/lib/schema";
 import { CURRENCIES, type Currency, type Transaction } from "@/lib/types";
 
 function fetchMonth(month: MonthKey): Promise<Transaction[] | null> {
@@ -37,7 +38,8 @@ export default function Home() {
   }, [month]);
 
   const { income, expenses, balance } = useMemo(() => {
-    const list = transactions ?? [];
+    // Los movimientos desactivados no cuentan en el recuento.
+    const list = (transactions ?? []).filter((t) => !t.excluded);
     const income = list
       .filter((t) => t.type === "income")
       .reduce((sum, t) => sum + t.amount, 0);
@@ -47,7 +49,7 @@ export default function Home() {
     return { income, expenses, balance: income - expenses };
   }, [transactions]);
 
-  async function handleAdd(input: Omit<Transaction, "id">) {
+  async function handleAdd(input: TransactionInput) {
     await window.api.transactions.create(input);
     const list = await fetchMonth(month);
     if (list) setTransactions(list);
@@ -55,6 +57,12 @@ export default function Home() {
 
   async function handleDelete(id: number) {
     await window.api.transactions.delete(id);
+    const list = await fetchMonth(month);
+    if (list) setTransactions(list);
+  }
+
+  async function handleToggleExcluded(id: number, excluded: boolean) {
+    await window.api.transactions.setExcluded(id, excluded);
     const list = await fetchMonth(month);
     if (list) setTransactions(list);
   }
@@ -114,6 +122,7 @@ export default function Home() {
               transactions={transactions}
               currency={currency}
               onDelete={handleDelete}
+              onToggleExcluded={handleToggleExcluded}
             />
           </>
         )}

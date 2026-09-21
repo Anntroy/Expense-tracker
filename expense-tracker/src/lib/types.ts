@@ -7,6 +7,8 @@ export interface Transaction {
   category: string
   description: string
   date: string
+  /** Desactivado: se muestra en la lista pero no cuenta en totales ni gráficos. */
+  excluded: boolean
 }
 
 export const CURRENCIES = ['EUR', 'USD', 'GBP'] as const

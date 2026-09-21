@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TransactionInputSchema } from "./schema";
+import { SetExcludedSchema, TransactionInputSchema } from "./schema";
 
 const valid = {
   type: "expense",
@@ -44,5 +44,17 @@ describe("TransactionInputSchema", () => {
     expect(
       TransactionInputSchema.safeParse({ ...valid, description: "x".repeat(201) }).success,
     ).toBe(false);
+  });
+});
+
+describe("SetExcludedSchema", () => {
+  it("accepts a positive integer id and a boolean", () => {
+    expect(SetExcludedSchema.safeParse({ id: 3, excluded: true }).success).toBe(true);
+  });
+
+  it("rejects invalid ids and non-boolean flags", () => {
+    expect(SetExcludedSchema.safeParse({ id: 0, excluded: true }).success).toBe(false);
+    expect(SetExcludedSchema.safeParse({ id: 1.5, excluded: true }).success).toBe(false);
+    expect(SetExcludedSchema.safeParse({ id: 1, excluded: "yes" }).success).toBe(false);
   });
 });

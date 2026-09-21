@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
-import { TransactionInputSchema } from "@/lib/schema";
+import { TransactionInputSchema, type TransactionInput } from "@/lib/schema";
 import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
@@ -10,7 +10,7 @@ import {
 } from "@/lib/types";
 
 type Props = {
-  onAdd: (input: Omit<Transaction, "id">) => void | Promise<void>;
+  onAdd: (input: TransactionInput) => void | Promise<void>;
 };
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
