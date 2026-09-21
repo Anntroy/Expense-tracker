@@ -8,5 +8,6 @@ export const {
   createTransaction,
   deleteTransaction,
   setTransactionExcluded,
+  summaryByCategory,
   listCategories,
 } = createTransactionsRepository(db);

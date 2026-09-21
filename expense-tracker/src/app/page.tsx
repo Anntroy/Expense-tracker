@@ -1,83 +1,32 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { CategoryDonut } from "@/components/CategoryDonut";
-import { MonthNav } from "@/components/MonthNav";
-import { SummaryCards } from "@/components/SummaryCards";
-import { TransactionForm } from "@/components/TransactionForm";
-import { TransactionList } from "@/components/TransactionList";
-import { currentMonthKey, formatMonthLabel, type MonthKey } from "@/lib/date";
-import type { TransactionInput } from "@/lib/schema";
-import { CURRENCIES, type Currency, type Transaction } from "@/lib/types";
-
-function fetchMonth(month: MonthKey): Promise<Transaction[] | null> {
-  if (typeof window === "undefined" || !window.api) {
-    return Promise.resolve(null);
-  }
-  return window.api.transactions.list(month);
-}
+import { useState } from "react";
+import { ComparisonView } from "@/components/ComparisonView";
+import { MonthView } from "@/components/MonthView";
+import { TabBar, type TabId } from "@/components/TabBar";
+import { currentMonthKey, formatMonthTitle, type MonthKey } from "@/lib/date";
+import { CURRENCIES, type Currency } from "@/lib/types";
 
 export default function Home() {
   const [currency, setCurrency] = useState<Currency>("EUR");
+  const [tab, setTab] = useState<TabId>("month");
   const [month, setMonth] = useState<MonthKey>(() => currentMonthKey());
-  const [transactions, setTransactions] = useState<Transaction[] | null>(null);
-  const [apiMissing, setApiMissing] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    fetchMonth(month).then((list) => {
-      if (cancelled) return;
-      if (list === null) setApiMissing(true);
-      else setTransactions(list);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [month]);
-
-  const { income, expenses, balance } = useMemo(() => {
-    // Los movimientos desactivados no cuentan en el recuento.
-    const list = (transactions ?? []).filter((t) => !t.excluded);
-    const income = list
-      .filter((t) => t.type === "income")
-      .reduce((sum, t) => sum + t.amount, 0);
-    const expenses = list
-      .filter((t) => t.type === "expense")
-      .reduce((sum, t) => sum + t.amount, 0);
-    return { income, expenses, balance: income - expenses };
-  }, [transactions]);
-
-  async function handleAdd(input: TransactionInput) {
-    await window.api.transactions.create(input);
-    const list = await fetchMonth(month);
-    if (list) setTransactions(list);
-  }
-
-  async function handleDelete(id: number) {
-    await window.api.transactions.delete(id);
-    const list = await fetchMonth(month);
-    if (list) setTransactions(list);
-  }
-
-  async function handleToggleExcluded(id: number, excluded: boolean) {
-    await window.api.transactions.setExcluded(id, excluded);
-    const list = await fetchMonth(month);
-    if (list) setTransactions(list);
-  }
 
   return (
     <div className="min-h-full flex-1 bg-zinc-50 dark:bg-black">
-      <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-10">
+      <main
+        className={`mx-auto flex w-full flex-col gap-6 px-6 py-10 ${
+          tab === "comparison" ? "max-w-5xl" : "max-w-3xl"
+        }`}
+      >
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
               Ingresos y gastos
             </h1>
-            <p className="text-sm capitalize text-zinc-500 dark:text-zinc-400">
-              {formatMonthLabel(month)}
-            </p>
+            {tab === "month" && (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">{formatMonthTitle(month)}</p>
+            )}
           </div>
           <label className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
             Moneda
@@ -95,37 +44,20 @@ export default function Home() {
           </label>
         </header>
 
-        <MonthNav month={month} onChange={setMonth} />
+        <TabBar active={tab} onChange={setTab} />
 
-        {apiMissing ? (
-          <p className="rounded-lg border border-dashed border-amber-400 bg-amber-50 p-6 text-center text-sm text-amber-800 dark:border-amber-600 dark:bg-amber-950 dark:text-amber-200">
-            Esta vista necesita ejecutarse dentro de la app de escritorio (
-            <code>npm run dev</code>), no en una pestaña de navegador normal: ahí no existe el
-            puente <code>window.api</code> que da acceso a los datos guardados.
-          </p>
-        ) : transactions === null ? (
-          <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">Cargando…</p>
-        ) : (
-          <>
-            <SummaryCards
-              income={income}
-              expenses={expenses}
-              balance={balance}
-              currency={currency}
-            />
-
-            <TransactionForm onAdd={handleAdd} />
-
-            <CategoryDonut transactions={transactions} currency={currency} />
-
-            <TransactionList
-              transactions={transactions}
-              currency={currency}
-              onDelete={handleDelete}
-              onToggleExcluded={handleToggleExcluded}
-            />
-          </>
-        )}
+        {/* Las dos vistas se mantienen montadas para conservar su estado al cambiar de pestaña. */}
+        <div role="tabpanel" id="panel-month" aria-labelledby="tab-month" hidden={tab !== "month"}>
+          <MonthView month={month} onMonthChange={setMonth} currency={currency} />
+        </div>
+        <div
+          role="tabpanel"
+          id="panel-comparison"
+          aria-labelledby="tab-comparison"
+          hidden={tab !== "comparison"}
+        >
+          <ComparisonView currency={currency} active={tab === "comparison"} />
+        </div>
       </main>
     </div>
   );

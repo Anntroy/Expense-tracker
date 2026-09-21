@@ -18,6 +18,12 @@ export function formatMonthLabel(month: MonthKey): string {
   return new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(date);
 }
 
+/** Nombre completo del mes con solo la primera letra en mayúscula, ej. "Septiembre de 2026". */
+export function formatMonthTitle(month: MonthKey): string {
+  const label = formatMonthLabel(month);
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 /** Etiqueta corta para una pestaña, ej. "sep 26". */
 export function formatMonthShortLabel(month: MonthKey): string {
   const [year, m] = month.split("-").map(Number);
@@ -38,4 +44,17 @@ export function monthDateRange(month: MonthKey): { from: string; to: string } {
   const lastDay = new Date(year, m, 0).getDate();
   const to = `${month}-${String(lastDay).padStart(2, "0")}`;
   return { from, to };
+}
+
+/** Meses seguidos de `from` a `to`, ambos incluidos, de más viejo a más nuevo. */
+export function monthRange(from: MonthKey, to: MonthKey): MonthKey[] {
+  const count = monthCount(from, to);
+  return Array.from({ length: Math.max(count, 0) }, (_, i) => shiftMonth(from, i));
+}
+
+/** Cantidad de meses del intervalo `from`..`to`, ambos incluidos (negativo o 0 si está invertido). */
+export function monthCount(from: MonthKey, to: MonthKey): number {
+  const [fromYear, fromMonth] = from.split("-").map(Number);
+  const [toYear, toMonth] = to.split("-").map(Number);
+  return (toYear - fromYear) * 12 + (toMonth - fromMonth) + 1;
 }

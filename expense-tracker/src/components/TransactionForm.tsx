@@ -5,7 +5,6 @@ import { TransactionInputSchema, type TransactionInput } from "@/lib/schema";
 import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
-  type Transaction,
   type TransactionType,
 } from "@/lib/types";
 

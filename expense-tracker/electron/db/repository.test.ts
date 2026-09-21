@@ -161,6 +161,53 @@ describe("setTransactionExcluded", () => {
   });
 });
 
+describe("summaryByCategory", () => {
+  it("groups expenses by month and category", () => {
+    repo.createTransaction(input({ date: "2026-08-05", category: "Comida", amount: 10 }));
+    repo.createTransaction(input({ date: "2026-08-20", category: "Comida", amount: 15.5 }));
+    repo.createTransaction(input({ date: "2026-09-02", category: "Comida", amount: 7 }));
+    repo.createTransaction(input({ date: "2026-08-11", category: "Ocio", amount: 30 }));
+
+    const rows = repo.summaryByCategory({ from: "2026-08", to: "2026-09" });
+    const key = (r: { month: string; category: string }) => `${r.month}/${r.category}`;
+    expect(Object.fromEntries(rows.map((r) => [key(r), r.amount]))).toEqual({
+      "2026-08/Comida": 25.5,
+      "2026-09/Comida": 7,
+      "2026-08/Ocio": 30,
+    });
+  });
+
+  it("ignores income and deactivated transactions", () => {
+    repo.createTransaction(input({ type: "income", category: "Salario", amount: 2000 }));
+    const off = repo.createTransaction(input({ category: "Comida", amount: 99 }));
+    repo.createTransaction(input({ category: "Comida", amount: 1 }));
+    repo.setTransactionExcluded(off.id, true);
+
+    expect(repo.summaryByCategory({ from: "2026-09", to: "2026-09" })).toEqual([
+      { month: "2026-09", category: "Comida", amount: 1 },
+    ]);
+  });
+
+  it("includes the first day of `from` and the last day of `to`, and nothing beyond", () => {
+    repo.createTransaction(input({ date: "2026-07-31", category: "Antes" }));
+    repo.createTransaction(input({ date: "2026-08-01", category: "Inicio" }));
+    repo.createTransaction(input({ date: "2026-09-30", category: "Fin" }));
+    repo.createTransaction(input({ date: "2026-10-01", category: "Despues" }));
+
+    const categories = repo.summaryByCategory({ from: "2026-08", to: "2026-09" }).map((r) => r.category);
+    expect(categories.sort()).toEqual(["Fin", "Inicio"]);
+  });
+
+  it("does not return months or categories without spending", () => {
+    expect(repo.summaryByCategory({ from: "2026-01", to: "2026-03" })).toEqual([]);
+  });
+
+  it("rejects an invalid range", () => {
+    expect(() => repo.summaryByCategory({ from: "2026-09", to: "2026-08" })).toThrow();
+    expect(() => repo.summaryByCategory({ from: "2025-01", to: "2026-09" })).toThrow();
+  });
+});
+
 describe("listCategories", () => {
   it("returns the distinct categories already used for the given type", () => {
     repo.createTransaction(input({ type: "expense", category: "Comida" }));

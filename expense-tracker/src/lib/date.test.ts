@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { monthDateRange, monthWindow, shiftMonth } from "./date";
+import { formatMonthTitle, monthCount, monthDateRange, monthRange, monthWindow, shiftMonth } from "./date";
 
 describe("shiftMonth", () => {
   it("moves forward and backward within the year", () => {
@@ -33,5 +33,37 @@ describe("monthDateRange", () => {
   it("February respects leap years", () => {
     expect(monthDateRange("2026-02").to).toBe("2026-02-28");
     expect(monthDateRange("2028-02").to).toBe("2028-02-29");
+  });
+});
+
+describe("monthRange", () => {
+  it("lists every month from `from` to `to`, both included", () => {
+    expect(monthRange("2026-08", "2026-09")).toEqual(["2026-08", "2026-09"]);
+  });
+
+  it("crosses the year boundary", () => {
+    expect(monthRange("2025-11", "2026-02")).toEqual(["2025-11", "2025-12", "2026-01", "2026-02"]);
+  });
+
+  it("returns a single month when both ends are equal", () => {
+    expect(monthRange("2026-09", "2026-09")).toEqual(["2026-09"]);
+  });
+
+  it("returns an empty list when the range is inverted", () => {
+    expect(monthRange("2026-09", "2026-08")).toEqual([]);
+  });
+});
+
+describe("monthCount", () => {
+  it("counts both ends", () => {
+    expect(monthCount("2026-09", "2026-09")).toBe(1);
+    expect(monthCount("2026-04", "2026-09")).toBe(6);
+    expect(monthCount("2025-10", "2026-09")).toBe(12);
+  });
+});
+
+describe("formatMonthTitle", () => {
+  it("capitalizes only the first letter, not the words after it", () => {
+    expect(formatMonthTitle("2026-09")).toBe("Septiembre de 2026");
   });
 });

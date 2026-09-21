@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SetExcludedSchema, TransactionInputSchema } from "./schema";
+import { MonthRangeSchema, SetExcludedSchema, TransactionInputSchema } from "./schema";
 
 const valid = {
   type: "expense",
@@ -56,5 +56,27 @@ describe("SetExcludedSchema", () => {
     expect(SetExcludedSchema.safeParse({ id: 0, excluded: true }).success).toBe(false);
     expect(SetExcludedSchema.safeParse({ id: 1.5, excluded: true }).success).toBe(false);
     expect(SetExcludedSchema.safeParse({ id: 1, excluded: "yes" }).success).toBe(false);
+  });
+});
+
+describe("MonthRangeSchema", () => {
+  it("accepts a valid range, including a single month", () => {
+    expect(MonthRangeSchema.safeParse({ from: "2026-08", to: "2026-09" }).success).toBe(true);
+    expect(MonthRangeSchema.safeParse({ from: "2026-09", to: "2026-09" }).success).toBe(true);
+  });
+
+  it("accepts exactly 12 months but rejects 13", () => {
+    expect(MonthRangeSchema.safeParse({ from: "2025-10", to: "2026-09" }).success).toBe(true);
+    expect(MonthRangeSchema.safeParse({ from: "2025-09", to: "2026-09" }).success).toBe(false);
+  });
+
+  it("rejects an inverted range", () => {
+    expect(MonthRangeSchema.safeParse({ from: "2026-09", to: "2026-08" }).success).toBe(false);
+  });
+
+  it("rejects malformed months", () => {
+    expect(MonthRangeSchema.safeParse({ from: "2026-13", to: "2026-09" }).success).toBe(false);
+    expect(MonthRangeSchema.safeParse({ from: "2026-9", to: "2026-09" }).success).toBe(false);
+    expect(MonthRangeSchema.safeParse({ from: "", to: "2026-09" }).success).toBe(false);
   });
 });

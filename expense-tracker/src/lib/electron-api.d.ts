@@ -1,5 +1,5 @@
-import type { TransactionInput } from "./schema";
-import type { Transaction, TransactionType } from "./types";
+import type { MonthRange, TransactionInput } from "./schema";
+import type { CategoryMonthTotal, Transaction, TransactionType } from "./types";
 import type { MonthKey } from "./date";
 
 export interface ElectronApi {
@@ -8,6 +8,7 @@ export interface ElectronApi {
     create: (input: TransactionInput) => Promise<Transaction>;
     delete: (id: number) => Promise<void>;
     setExcluded: (id: number, excluded: boolean) => Promise<void>;
+    summary: (range: MonthRange) => Promise<CategoryMonthTotal[]>;
     categories: (type: TransactionType) => Promise<string[]>;
   };
 }

@@ -1,10 +1,16 @@
-import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema";
 import { transactions } from "./schema";
-import { SetExcludedSchema, TransactionInputSchema, type TransactionInput } from "../../src/lib/schema";
+import {
+  MonthRangeSchema,
+  SetExcludedSchema,
+  TransactionInputSchema,
+  type MonthRange,
+  type TransactionInput,
+} from "../../src/lib/schema";
 import { monthDateRange, type MonthKey } from "../../src/lib/date";
-import type { Transaction, TransactionType } from "../../src/lib/types";
+import type { CategoryMonthTotal, Transaction, TransactionType } from "../../src/lib/types";
 
 export type Db = BetterSQLite3Database<typeof schema>;
 
@@ -65,6 +71,34 @@ export function createTransactionsRepository(db: Db) {
         .set({ excluded: parsed.excluded })
         .where(eq(transactions.id, parsed.id))
         .run();
+    },
+
+    /**
+     * Gasto por mes y categoría en un intervalo de meses, ignorando ingresos y
+     * movimientos desactivados. Solo devuelve los pares que tienen gasto: rellenar
+     * con 0 los meses vacíos es cosa de `buildComparison`.
+     */
+    summaryByCategory(range: MonthRange): CategoryMonthTotal[] {
+      const { from, to } = MonthRangeSchema.parse(range);
+      const month = sql<string>`substr(${transactions.date}, 1, 7)`;
+      const rows = db
+        .select({
+          month,
+          category: transactions.category,
+          cents: sql<number>`sum(${transactions.amount})`,
+        })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.type, "expense"),
+            eq(transactions.excluded, false),
+            gte(transactions.date, monthDateRange(from).from),
+            lte(transactions.date, monthDateRange(to).to),
+          ),
+        )
+        .groupBy(month, transactions.category)
+        .all();
+      return rows.map((r) => ({ month: r.month, category: r.category, amount: r.cents / 100 }));
     },
 
     /** Categorías ya usadas alguna vez para ese tipo, para sugerirlas en el formulario. */
