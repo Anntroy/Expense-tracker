@@ -17,24 +17,6 @@ type Props = {
   members?: Member[];
 };
 
-const LAST_MEMBER_KEY = "expense-tracker:last-member";
-
-function readLastMember(): string {
-  try {
-    return localStorage.getItem(LAST_MEMBER_KEY) ?? "";
-  } catch {
-    return "";
-  }
-}
-
-function rememberMember(id: string) {
-  try {
-    localStorage.setItem(LAST_MEMBER_KEY, id);
-  } catch {
-    // Sin localStorage el campo simplemente no recuerda la última elección.
-  }
-}
-
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 function fetchCategories(type: TransactionType): Promise<string[]> {
@@ -48,14 +30,17 @@ export function TransactionForm({ onAdd, onDateChange, members = [] }: Props) {
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(todayISO());
-  // `null` = todavía no se tocó: se propone el último miembro usado en este equipo.
+  // `null` = todavía no se eligió: se propone el primer miembro. "" = "Sin asignar" elegido a mano.
   const [chosenMember, setChosenMember] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [usedCategories, setUsedCategories] = useState<string[]>([]);
   const categoryListId = useId();
 
-  const proposedMember = chosenMember ?? readLastMember();
-  const memberValue = members.some((m) => String(m.id) === proposedMember) ? proposedMember : "";
+  const firstMember = members[0] ? String(members[0].id) : "";
+  const memberValue =
+    chosenMember === "" || members.some((m) => String(m.id) === chosenMember)
+      ? (chosenMember as string)
+      : firstMember;
 
   useEffect(() => {
     fetchCategories(type).then(setUsedCategories);
@@ -92,7 +77,6 @@ export function TransactionForm({ onAdd, onDateChange, members = [] }: Props) {
 
     await onAdd(result.data);
     setChosenMember(memberValue);
-    rememberMember(memberValue);
     setAmount("");
     setCategory("");
     setDescription("");
