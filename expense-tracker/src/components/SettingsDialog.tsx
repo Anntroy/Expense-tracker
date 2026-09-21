@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { PinSettings } from "@/components/PinSettings";
 import { errorMessage } from "@/lib/error-message";
 import { MAX_MEMBERS } from "@/lib/schema";
 import type { Member } from "@/lib/types";
@@ -11,6 +12,10 @@ type Props = {
   members: Member[];
   /** Se llama después de cada cambio para recargar la lista de miembros. */
   onMembersChanged: () => void | Promise<void>;
+  /** Hay un PIN configurado. */
+  hasPin: boolean;
+  /** Se llama tras activar, cambiar o quitar el PIN. */
+  onAuthChanged: () => void | Promise<void>;
 };
 
 const inputClass =
@@ -19,7 +24,7 @@ const smallButton =
   "rounded-md px-2 py-1 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50";
 
 /** Configuración de la app. Por ahora: los miembros del hogar (etiquetas "quién"). */
-export function SettingsDialog({ open, onClose, members, onMembersChanged }: Props) {
+export function SettingsDialog({ open, onClose, members, onMembersChanged, hasPin, onAuthChanged }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [newName, setNewName] = useState("");
   const [editing, setEditing] = useState<{ id: number; name: string } | null>(null);
@@ -72,7 +77,7 @@ export function SettingsDialog({ open, onClose, members, onMembersChanged }: Pro
         if (e.target === ref.current) onClose();
       }}
       aria-labelledby="settings-title"
-      className="m-auto w-full max-w-md rounded-xl border border-zinc-200 bg-white p-0 text-zinc-900 shadow-xl backdrop:bg-black/40 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50"
+      className="m-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-zinc-200 bg-white p-0 text-zinc-900 shadow-xl backdrop:bg-black/40 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50"
     >
       <div className="flex flex-col gap-5 p-6">
         <div className="flex items-center justify-between">
@@ -205,6 +210,10 @@ export function SettingsDialog({ open, onClose, members, onMembersChanged }: Pro
             </details>
           )}
         </section>
+
+        <hr className="border-zinc-200 dark:border-zinc-800" />
+
+        <PinSettings hasPin={hasPin} onChanged={onAuthChanged} />
       </div>
     </dialog>
   );

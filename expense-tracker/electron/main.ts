@@ -1,11 +1,13 @@
 import { app, BrowserWindow } from "electron";
 import path from "node:path";
-import { runMigrations } from "./db/client";
+import { createAuth, type Auth } from "./auth";
+import { db, runMigrations } from "./db/client";
+import { createSettingsRepository } from "./db/settings";
 import { registerIpcHandlers } from "./ipc";
 
 const isDev = !app.isPackaged;
 
-function createWindow() {
+function createWindow(auth: Auth) {
   const win = new BrowserWindow({
     width: 1100,
     height: 750,
@@ -17,6 +19,9 @@ function createWindow() {
     },
   });
 
+  // En macOS la app sigue viva al cerrar la ventana y se puede reabrir: se vuelve a bloquear.
+  win.on("closed", () => auth.lock());
+
   if (isDev) {
     win.loadURL("http://localhost:3000");
   } else {
@@ -26,11 +31,13 @@ function createWindow() {
 
 app.whenReady().then(() => {
   runMigrations();
-  registerIpcHandlers();
-  createWindow();
+  const settings = createSettingsRepository(db);
+  const auth = createAuth({ store: settings });
+  registerIpcHandlers({ auth, settings });
+  createWindow(auth);
 
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) createWindow(auth);
   });
 });
 

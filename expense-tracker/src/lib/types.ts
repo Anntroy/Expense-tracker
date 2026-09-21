@@ -29,3 +29,24 @@ export interface Member {
   name: string
   archived: boolean
 }
+
+/** Estado del bloqueo con PIN. */
+export interface AuthStatus {
+  /** Hay un PIN configurado. */
+  hasPin: boolean
+  /** La app está desbloqueada (siempre true si no hay PIN). */
+  unlocked: boolean
+}
+
+/** Resultado de intentar desbloquear con un PIN. */
+export type UnlockResult =
+  | { ok: true }
+  | {
+      ok: false
+      /** "wrong" = PIN incorrecto; "locked-out" = demasiados intentos, hay que esperar. */
+      reason: 'wrong' | 'locked-out'
+      /** Milisegundos hasta poder volver a intentarlo (0 si no hay espera). */
+      retryAfterMs: number
+      /** Intentos que quedan antes de la siguiente espera. */
+      attemptsLeft: number
+    }

@@ -11,5 +11,5 @@
     "types": ["node"]
   },
   "include": ["*.ts", "db/**/*.ts", "../src/lib/**/*.ts"],
-  "exclude": ["../src/**/*.test.ts", "db/**/*.test.ts"]
+  "exclude": ["../src/**/*.test.ts", "*.test.ts", "db/**/*.test.ts"]
 }

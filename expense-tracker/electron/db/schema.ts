@@ -25,3 +25,9 @@ export const transactions = sqliteTable("transactions", {
   // Quién pagó / cobró. Nulo = sin asignar (p. ej. los movimientos anteriores a los miembros).
   memberId: integer("member_id").references(() => members.id),
 });
+
+// Ajustes de la app en formato clave/valor (moneda, PIN de bloqueo...).
+export const settings = sqliteTable("settings", {
+  key: text().primaryKey(),
+  value: text().notNull(),
+});

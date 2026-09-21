@@ -1,4 +1,6 @@
 import { ipcMain } from "electron";
+import type { Auth } from "./auth";
+import type { SettingsRepository } from "./db/settings";
 import {
   createTransaction,
   deleteTransaction,
@@ -11,25 +13,47 @@ import {
   setTransactionExcluded,
   summaryByCategory,
 } from "./db/transactions";
-import type { MonthKey } from "../src/lib/date";
-import type { MonthRange } from "../src/lib/schema";
-import type { TransactionType } from "../src/lib/types";
+import type { Currency } from "../src/lib/types";
 
-export function registerIpcHandlers() {
-  ipcMain.handle("transactions:list", (_event, month: MonthKey) => listTransactions(month));
-  ipcMain.handle("transactions:create", (_event, input) => createTransaction(input));
-  ipcMain.handle("transactions:delete", (_event, id: number) => deleteTransaction(id));
-  ipcMain.handle("transactions:setExcluded", (_event, id: number, excluded: boolean) =>
-    setTransactionExcluded(id, excluded),
+type Deps = {
+  auth: Auth;
+  settings: SettingsRepository;
+};
+
+/**
+ * Registra todos los canales IPC. Los de datos pasan por `guarded`: si la app
+ * está bloqueada con PIN, se rechazan en el proceso principal (no basta con que
+ * la interfaz muestre la pantalla de bloqueo). Los canales `auth:*` son los únicos
+ * que funcionan estando bloqueada.
+ */
+export function registerIpcHandlers({ auth, settings }: Deps) {
+  const guarded =
+    <A extends unknown[], R>(fn: (...args: A) => R) =>
+    (_event: unknown, ...args: A): R => {
+      auth.assertUnlocked();
+      return fn(...args);
+    };
+
+  // --- Bloqueo con PIN (sin guardia)
+  ipcMain.handle("auth:status", () => auth.status());
+  ipcMain.handle("auth:unlock", (_event, pin: string) => auth.unlock(pin));
+  ipcMain.handle("auth:lock", () => auth.lock());
+  ipcMain.handle("auth:setPin", (_event, newPin: string, currentPin?: string) =>
+    auth.setPin(newPin, currentPin),
   );
-  ipcMain.handle("transactions:summary", (_event, range: MonthRange, memberId?: number | null) =>
-    summaryByCategory(range, memberId),
-  );
-  ipcMain.handle("members:list", () => listMembers());
-  ipcMain.handle("members:create", (_event, name: string) => createMember(name));
-  ipcMain.handle("members:rename", (_event, id: number, name: string) => renameMember(id, name));
-  ipcMain.handle("members:setArchived", (_event, id: number, archived: boolean) =>
-    setMemberArchived(id, archived),
-  );
-  ipcMain.handle("transactions:categories", (_event, type: TransactionType) => listCategories(type));
+  ipcMain.handle("auth:removePin", (_event, currentPin: string) => auth.removePin(currentPin));
+
+  // --- Datos (con guardia)
+  ipcMain.handle("transactions:list", guarded(listTransactions));
+  ipcMain.handle("transactions:create", guarded(createTransaction));
+  ipcMain.handle("transactions:delete", guarded(deleteTransaction));
+  ipcMain.handle("transactions:setExcluded", guarded(setTransactionExcluded));
+  ipcMain.handle("transactions:summary", guarded(summaryByCategory));
+  ipcMain.handle("transactions:categories", guarded(listCategories));
+  ipcMain.handle("members:list", guarded(listMembers));
+  ipcMain.handle("members:create", guarded(createMember));
+  ipcMain.handle("members:rename", guarded(renameMember));
+  ipcMain.handle("members:setArchived", guarded(setMemberArchived));
+  ipcMain.handle("settings:getCurrency", guarded(() => settings.getCurrency()));
+  ipcMain.handle("settings:setCurrency", guarded((currency: Currency) => settings.setCurrency(currency)));
 }

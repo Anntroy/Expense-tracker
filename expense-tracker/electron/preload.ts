@@ -1,5 +1,13 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { CategoryMonthTotal, Member, Transaction, TransactionType } from "../src/lib/types";
+import type {
+  AuthStatus,
+  CategoryMonthTotal,
+  Currency,
+  Member,
+  Transaction,
+  TransactionType,
+  UnlockResult,
+} from "../src/lib/types";
 import type { MonthRange, TransactionInput } from "../src/lib/schema";
 import type { MonthKey } from "../src/lib/date";
 
@@ -16,6 +24,18 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("transactions:summary", range, memberId),
     categories: (type: TransactionType): Promise<string[]> =>
       ipcRenderer.invoke("transactions:categories", type),
+  },
+  auth: {
+    status: (): Promise<AuthStatus> => ipcRenderer.invoke("auth:status"),
+    unlock: (pin: string): Promise<UnlockResult> => ipcRenderer.invoke("auth:unlock", pin),
+    lock: (): Promise<void> => ipcRenderer.invoke("auth:lock"),
+    setPin: (newPin: string, currentPin?: string): Promise<void> =>
+      ipcRenderer.invoke("auth:setPin", newPin, currentPin),
+    removePin: (currentPin: string): Promise<void> => ipcRenderer.invoke("auth:removePin", currentPin),
+  },
+  settings: {
+    getCurrency: (): Promise<Currency> => ipcRenderer.invoke("settings:getCurrency"),
+    setCurrency: (currency: Currency): Promise<void> => ipcRenderer.invoke("settings:setCurrency", currency),
   },
   members: {
     list: (): Promise<Member[]> => ipcRenderer.invoke("members:list"),

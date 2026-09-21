@@ -1,5 +1,13 @@
 import type { MonthRange, TransactionInput } from "./schema";
-import type { CategoryMonthTotal, Member, Transaction, TransactionType } from "./types";
+import type {
+  AuthStatus,
+  CategoryMonthTotal,
+  Currency,
+  Member,
+  Transaction,
+  TransactionType,
+  UnlockResult,
+} from "./types";
 import type { MonthKey } from "./date";
 
 export interface ElectronApi {
@@ -10,6 +18,17 @@ export interface ElectronApi {
     setExcluded: (id: number, excluded: boolean) => Promise<void>;
     summary: (range: MonthRange, memberId?: number | null) => Promise<CategoryMonthTotal[]>;
     categories: (type: TransactionType) => Promise<string[]>;
+  };
+  auth: {
+    status: () => Promise<AuthStatus>;
+    unlock: (pin: string) => Promise<UnlockResult>;
+    lock: () => Promise<void>;
+    setPin: (newPin: string, currentPin?: string) => Promise<void>;
+    removePin: (currentPin: string) => Promise<void>;
+  };
+  settings: {
+    getCurrency: () => Promise<Currency>;
+    setCurrency: (currency: Currency) => Promise<void>;
   };
   members: {
     list: () => Promise<Member[]>;

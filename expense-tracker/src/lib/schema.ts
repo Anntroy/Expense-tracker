@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { monthCount } from "./date";
+import { CURRENCIES } from "./types";
 
 export const TransactionInputSchema = z.object({
   type: z.enum(["income", "expense"]),
@@ -52,3 +53,8 @@ export const MemberNameSchema = z
  * los movimientos sin asignar, un número = solo los de ese miembro.
  */
 export const MemberFilterSchema = MemberIdSchema.nullable().optional();
+
+/** PIN de bloqueo: solo dígitos, entre 4 y 8. */
+export const PinSchema = z.string().regex(/^\d{4,8}$/, { error: "El PIN debe tener entre 4 y 8 dígitos." });
+
+export const CurrencySchema = z.enum(CURRENCIES);

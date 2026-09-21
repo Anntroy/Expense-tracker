@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  CurrencySchema,
   MemberIdSchema,
   MemberNameSchema,
   MonthRangeSchema,
+  PinSchema,
   SetExcludedSchema,
   TransactionInputSchema,
 } from "./schema";
@@ -114,5 +116,25 @@ describe("member schemas", () => {
     expect(MemberIdSchema.safeParse(2).success).toBe(true);
     expect(MemberIdSchema.safeParse(0).success).toBe(false);
     expect(MemberIdSchema.safeParse(1.5).success).toBe(false);
+  });
+});
+
+describe("PinSchema", () => {
+  it("accepts 4 to 8 digits", () => {
+    for (const ok of ["1234", "000000", "12345678"]) expect(PinSchema.safeParse(ok).success).toBe(true);
+  });
+
+  it("rejects anything else", () => {
+    for (const bad of ["123", "123456789", "12a4", "", " 1234", "12.34", 1234]) {
+      expect(PinSchema.safeParse(bad).success).toBe(false);
+    }
+  });
+});
+
+describe("CurrencySchema", () => {
+  it("only accepts the supported currencies", () => {
+    expect(CurrencySchema.safeParse("EUR").success).toBe(true);
+    expect(CurrencySchema.safeParse("USD").success).toBe(true);
+    expect(CurrencySchema.safeParse("JPY").success).toBe(false);
   });
 });
