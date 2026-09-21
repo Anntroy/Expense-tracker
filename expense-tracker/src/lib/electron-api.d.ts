@@ -8,7 +8,7 @@ export interface ElectronApi {
     create: (input: TransactionInput) => Promise<Transaction>;
     delete: (id: number) => Promise<void>;
     setExcluded: (id: number, excluded: boolean) => Promise<void>;
-    summary: (range: MonthRange) => Promise<CategoryMonthTotal[]>;
+    summary: (range: MonthRange, memberId?: number | null) => Promise<CategoryMonthTotal[]>;
     categories: (type: TransactionType) => Promise<string[]>;
   };
   members: {

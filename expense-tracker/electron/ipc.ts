@@ -22,7 +22,9 @@ export function registerIpcHandlers() {
   ipcMain.handle("transactions:setExcluded", (_event, id: number, excluded: boolean) =>
     setTransactionExcluded(id, excluded),
   );
-  ipcMain.handle("transactions:summary", (_event, range: MonthRange) => summaryByCategory(range));
+  ipcMain.handle("transactions:summary", (_event, range: MonthRange, memberId?: number | null) =>
+    summaryByCategory(range, memberId),
+  );
   ipcMain.handle("members:list", () => listMembers());
   ipcMain.handle("members:create", (_event, name: string) => createMember(name));
   ipcMain.handle("members:rename", (_event, id: number, name: string) => renameMember(id, name));

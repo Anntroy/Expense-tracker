@@ -6,17 +6,19 @@ type Props = {
   currency: string;
   /** Todos los miembros (también archivados) para mostrar el nombre de quién pagó. */
   members?: Member[];
+  /** Texto cuando no hay movimientos que mostrar. */
+  emptyMessage?: string;
   onDelete: (id: number) => void;
   onToggleExcluded: (id: number, excluded: boolean) => void;
 };
 
-export function TransactionList({ transactions, currency, members = [], onDelete, onToggleExcluded }: Props) {
+export function TransactionList({ transactions, currency, members = [], emptyMessage = "Todavía no registraste ningún movimiento este mes.", onDelete, onToggleExcluded }: Props) {
   const memberNames = new Map(members.map((m) => [m.id, m.name]));
 
   if (transactions.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-        Todavía no registraste ningún movimiento este mes.
+        {emptyMessage}
       </p>
     );
   }

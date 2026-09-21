@@ -204,6 +204,49 @@ describe("summaryByCategory", () => {
     expect(repo.summaryByCategory({ from: "2026-01", to: "2026-03" })).toEqual([]);
   });
 
+  describe("filtering by person", () => {
+    beforeEach(() => {
+      const ana = repo.createMember("Ana");
+      const luis = repo.createMember("Luis");
+      repo.createTransaction(input({ category: "Comida", amount: 10, memberId: ana.id }));
+      repo.createTransaction(input({ category: "Comida", amount: 20, memberId: luis.id }));
+      repo.createTransaction(input({ category: "Ocio", amount: 5 })); // sin asignar
+    });
+
+    const total = (rows: { amount: number }[]) => rows.reduce((sum, r) => sum + r.amount, 0);
+    const range = { from: "2026-09", to: "2026-09" };
+
+    it("returns everyone when no filter is given", () => {
+      expect(total(repo.summaryByCategory(range))).toBe(35);
+    });
+
+    it("returns only the chosen member", () => {
+      const ana = repo.listMembers().find((m) => m.name === "Ana")!;
+      expect(repo.summaryByCategory(range, ana.id)).toEqual([
+        { month: "2026-09", category: "Comida", amount: 10 },
+      ]);
+    });
+
+    it("returns only unassigned movements with null", () => {
+      expect(repo.summaryByCategory(range, null)).toEqual([
+        { month: "2026-09", category: "Ocio", amount: 5 },
+      ]);
+    });
+
+    it("returns nothing for a member without expenses, and rejects invalid ids", () => {
+      expect(repo.summaryByCategory(range, 999)).toEqual([]);
+      expect(() => repo.summaryByCategory(range, 0)).toThrow();
+      expect(() => repo.summaryByCategory(range, 1.5)).toThrow();
+    });
+
+    it("still ignores deactivated transactions when filtering", () => {
+      const luis = repo.listMembers().find((m) => m.name === "Luis")!;
+      const luisTx = repo.listTransactions("2026-09").find((t) => t.memberId === luis.id)!;
+      repo.setTransactionExcluded(luisTx.id, true);
+      expect(repo.summaryByCategory(range, luis.id)).toEqual([]);
+    });
+  });
+
   it("rejects an invalid range", () => {
     expect(() => repo.summaryByCategory({ from: "2026-09", to: "2026-08" })).toThrow();
     expect(() => repo.summaryByCategory({ from: "2025-01", to: "2026-09" })).toThrow();

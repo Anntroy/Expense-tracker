@@ -46,3 +46,9 @@ export const MemberNameSchema = z
   .trim()
   .min(1, { error: "Escribí un nombre." })
   .max(30, { error: "Máximo 30 caracteres." });
+
+/**
+ * Filtro por persona en las consultas: omitido = todas las personas, `null` = solo
+ * los movimientos sin asignar, un número = solo los de ese miembro.
+ */
+export const MemberFilterSchema = MemberIdSchema.nullable().optional();

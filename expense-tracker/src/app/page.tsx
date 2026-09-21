@@ -84,7 +84,7 @@ export default function Home() {
           aria-labelledby="tab-comparison"
           hidden={tab !== "comparison"}
         >
-          <ComparisonView currency={currency} active={tab === "comparison"} />
+          <ComparisonView currency={currency} active={tab === "comparison"} members={members} />
         </div>
       </main>
 

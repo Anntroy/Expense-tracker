@@ -1,4 +1,5 @@
 import type { MonthKey } from "./date";
+import { roundCents } from "./money";
 import type { CategoryMonthTotal } from "./types";
 
 export type ComparisonRow = {
@@ -15,11 +16,6 @@ export type Comparison = {
   /** Gasto total de todas las categorías por mes. */
   monthTotals: number[];
 };
-
-/** Evita restos de punto flotante al sumar decimales (0.1 + 0.2). */
-function roundCents(value: number): number {
-  return Math.round(value * 100) / 100;
-}
 
 /**
  * Cambio relativo entre dos meses (0.25 = +25 %). Devuelve `null` cuando no hay

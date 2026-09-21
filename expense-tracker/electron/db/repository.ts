@@ -1,9 +1,10 @@
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema";
 import { members, transactions } from "./schema";
 import {
   MAX_MEMBERS,
+  MemberFilterSchema,
   MemberIdSchema,
   MemberNameSchema,
   MonthRangeSchema,
@@ -88,9 +89,18 @@ export function createTransactionsRepository(db: Db) {
      * Gasto por mes y categoría en un intervalo de meses, ignorando ingresos y
      * movimientos desactivados. Solo devuelve los pares que tienen gasto: rellenar
      * con 0 los meses vacíos es cosa de `buildComparison`.
+     *
+     * `memberId` filtra por persona: omitido = todas, `null` = sin asignar, número = ese miembro.
      */
-    summaryByCategory(range: MonthRange): CategoryMonthTotal[] {
+    summaryByCategory(range: MonthRange, memberId?: number | null): CategoryMonthTotal[] {
       const { from, to } = MonthRangeSchema.parse(range);
+      const member = MemberFilterSchema.parse(memberId);
+      const memberCondition =
+        member === undefined
+          ? undefined
+          : member === null
+            ? isNull(transactions.memberId)
+            : eq(transactions.memberId, member);
       const month = sql<string>`substr(${transactions.date}, 1, 7)`;
       const rows = db
         .select({
@@ -105,6 +115,7 @@ export function createTransactionsRepository(db: Db) {
             eq(transactions.excluded, false),
             gte(transactions.date, monthDateRange(from).from),
             lte(transactions.date, monthDateRange(to).to),
+            memberCondition,
           ),
         )
         .groupBy(month, transactions.category)

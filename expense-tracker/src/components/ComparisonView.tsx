@@ -5,11 +5,13 @@ import { ApiMissingNotice } from "@/components/ApiMissingNotice";
 import { CategoryDetail } from "@/components/CategoryDetail";
 import { CategoryPanels } from "@/components/CategoryPanels";
 import { ComparisonTable } from "@/components/ComparisonTable";
+import { PersonSelect } from "@/components/PersonSelect";
 import { RangePicker } from "@/components/RangePicker";
 import { buildComparison } from "@/lib/comparison";
 import { currentMonthKey, monthRange, shiftMonth } from "@/lib/date";
+import { ALL_PEOPLE, filterToMemberId, personLabel, type PersonFilter } from "@/lib/member-totals";
 import { MonthRangeSchema } from "@/lib/schema";
-import { EXPENSE_CATEGORIES, type CategoryMonthTotal } from "@/lib/types";
+import { EXPENSE_CATEGORIES, type CategoryMonthTotal, type Member } from "@/lib/types";
 
 const DEFAULT_MONTHS = 6;
 
@@ -25,12 +27,15 @@ type Props = {
   currency: string;
   /** La pestaña está visible: al activarse se vuelven a pedir los datos (pudieron cambiar en la otra). */
   active: boolean;
+  /** Miembros del hogar (activos y archivados), para el filtro por persona. */
+  members: Member[];
 };
 
-export function ComparisonView({ currency, active }: Props) {
+export function ComparisonView({ currency, active, members }: Props) {
   const [from, setFrom] = useState(() => shiftMonth(currentMonthKey(), -(DEFAULT_MONTHS - 1)));
   const [to, setTo] = useState(() => currentMonthKey());
   const [category, setCategory] = useState(""); // "" = todas
+  const [person, setPerson] = useState<PersonFilter>(ALL_PEOPLE);
   const [fetched, setFetched] = useState<Fetched | null>(null);
   const [apiMissing, setApiMissing] = useState(false);
 
@@ -48,12 +53,12 @@ export function ComparisonView({ currency, active }: Props) {
 
     let cancelled = false;
     Promise.all([
-      window.api.transactions.summary({ from: rangeFrom, to: rangeTo }),
+      window.api.transactions.summary({ from: rangeFrom, to: rangeTo }, filterToMemberId(person)),
       window.api.transactions.categories("expense"),
     ]).then(([rows, usedCategories]) => {
       if (cancelled) return;
       setFetched({
-        key: `${rangeFrom}|${rangeTo}`,
+        key: `${rangeFrom}|${rangeTo}|${person}`,
         months: monthRange(rangeFrom, rangeTo),
         rows,
         usedCategories,
@@ -63,7 +68,7 @@ export function ComparisonView({ currency, active }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [active, rangeFrom, rangeTo]);
+  }, [active, rangeFrom, rangeTo, person]);
 
   const comparison = useMemo(
     () => (fetched ? buildComparison(fetched.rows, fetched.months) : null),
@@ -78,7 +83,7 @@ export function ComparisonView({ currency, active }: Props) {
   }, [fetched]);
 
   // Mientras llegan los datos del nuevo intervalo se mantiene el render anterior, atenuado.
-  const stale = fetched !== null && parsed.success && fetched.key !== `${rangeFrom}|${rangeTo}`;
+  const stale = fetched !== null && parsed.success && fetched.key !== `${rangeFrom}|${rangeTo}|${person}`;
 
   return (
     <div className="flex flex-col gap-6">
@@ -92,22 +97,36 @@ export function ComparisonView({ currency, active }: Props) {
             setTo(range.to);
           }}
         />
-        <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400 sm:w-64">
-          Categoría
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-          >
-            <option value="">Todas las categorías</option>
-            {categoryOptions.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex flex-wrap gap-4">
+          <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400 sm:w-64">
+            Categoría
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+            >
+              <option value="">Todas las categorías</option>
+              {categoryOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+          {members.length > 0 && (
+            <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400 sm:w-64">
+              Persona
+              <PersonSelect value={person} onChange={setPerson} members={members} />
+            </label>
+          )}
+        </div>
       </div>
+
+      {person !== ALL_PEOPLE && (
+        <p className="rounded-lg bg-zinc-100 px-4 py-2 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+          Mostrando solo los gastos de <strong>{personLabel(person, members)}</strong>.
+        </p>
+      )}
 
       {apiMissing ? (
         <ApiMissingNotice />
