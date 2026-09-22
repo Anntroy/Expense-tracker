@@ -8,8 +8,10 @@ import { PersonSelect } from "@/components/PersonSelect";
 import { SummaryCards } from "@/components/SummaryCards";
 import { TransactionForm } from "@/components/TransactionForm";
 import { TransactionList } from "@/components/TransactionList";
-import type { MonthKey } from "@/lib/date";
+import { monthOfDate, type MonthKey } from "@/lib/date";
 import { ALL_PEOPLE, matchesPerson, type PersonFilter } from "@/lib/member-totals";
+import { monthTotals } from "@/lib/month-totals";
+import { viewAfterAdd } from "@/lib/month-view";
 import type { TransactionInput } from "@/lib/schema";
 import type { Member, Transaction } from "@/lib/types";
 
@@ -53,31 +55,22 @@ export function MonthView({ month, onMonthChange, currency, members }: Props) {
     [transactions, person],
   );
 
-  const { income, expenses, savings, balance } = useMemo(() => {
-    // Los movimientos desactivados no cuentan en el recuento.
-    const list = visible.filter((t) => !t.excluded);
-    const total = (type: Transaction["type"]) =>
-      list.filter((t) => t.type === type).reduce((sum, t) => sum + t.amount, 0);
-    const income = total("income");
-    const expenses = total("expense");
-    const savings = total("saving");
-    // El ahorro es dinero apartado: no es un gasto, pero tampoco queda disponible.
-    return { income, expenses, savings, balance: income - expenses - savings };
-  }, [visible]);
+  const { income, expenses, savings, balance } = useMemo(() => monthTotals(visible), [visible]);
 
   // Muestra el mes al que pertenece una fecha ("YYYY-MM-DD" -> "YYYY-MM").
   function showMonthOf(date: string) {
-    const target = date.slice(0, 7);
+    const target = monthOfDate(date);
     if (target !== month) onMonthChange(target);
   }
 
   async function handleAdd(input: TransactionInput) {
     await window.api.transactions.create(input);
-    // Si el movimiento nuevo quedaría oculto por el filtro de persona, se quita el filtro para que se vea.
-    if (!matchesPerson(input, person)) setPerson(ALL_PEOPLE);
-    if (input.date.slice(0, 7) !== month) {
-      // El movimiento cae en otro mes: se pasa a ese mes (el efecto recarga la lista).
-      showMonthOf(input.date);
+    // Se pasa al mes del movimiento nuevo y se quita el filtro de persona si lo ocultaría.
+    const next = viewAfterAdd(input, { month, person });
+    if (next.person !== person) setPerson(next.person);
+    if (next.month !== month) {
+      // El movimiento cae en otro mes: el efecto recarga la lista de ese mes.
+      onMonthChange(next.month);
       return;
     }
     const list = await fetchMonth(month);
