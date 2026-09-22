@@ -10,8 +10,11 @@ import type {
 } from "../src/lib/types";
 import type { MonthRange, TransactionInput } from "../src/lib/schema";
 import type { MonthKey } from "../src/lib/date";
+import type { ElectronApi } from "../src/lib/electron-api";
 
-contextBridge.exposeInMainWorld("api", {
+// `satisfies` hace que TypeScript compruebe que esta API coincide con `ElectronApi`, el tipo
+// que usa la interfaz: si se añade, quita o cambia un método en un sitio y no en el otro, no compila.
+const api = {
   transactions: {
     list: (month: MonthKey): Promise<Transaction[]> =>
       ipcRenderer.invoke("transactions:list", month),
@@ -48,4 +51,6 @@ contextBridge.exposeInMainWorld("api", {
     setArchived: (id: number, archived: boolean): Promise<void> =>
       ipcRenderer.invoke("members:setArchived", id, archived),
   },
-});
+} satisfies ElectronApi;
+
+contextBridge.exposeInMainWorld("api", api);
