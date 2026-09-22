@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { wrongPinMessage } from "@/lib/unlock-message";
 
 type Props = {
   /** Se llama cuando el PIN fue correcto, para que la app se muestre. */
@@ -50,9 +51,7 @@ export function LockScreen({ onUnlocked }: Props) {
         setMessage("Demasiados intentos.");
         setWaitUntil(Date.now() + result.retryAfterMs);
       } else {
-        setMessage(
-          `PIN incorrecto. ${result.attemptsLeft === 1 ? "Queda 1 intento" : `Quedan ${result.attemptsLeft} intentos`} antes de una espera.`,
-        );
+        setMessage(wrongPinMessage(result.attemptsLeft));
       }
     } finally {
       setBusy(false);
