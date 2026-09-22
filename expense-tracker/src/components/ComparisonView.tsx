@@ -7,6 +7,7 @@ import { CategoryPanels } from "@/components/CategoryPanels";
 import { ComparisonTable } from "@/components/ComparisonTable";
 import { PersonSelect } from "@/components/PersonSelect";
 import { RangePicker } from "@/components/RangePicker";
+import { mergeCategories } from "@/lib/categories";
 import { ALL_PEOPLE, personLabel, type PersonFilter } from "@/lib/member-totals";
 import { useCategorySummary } from "@/lib/use-category-summary";
 import { useMonthRange } from "@/lib/use-month-range";
@@ -33,9 +34,7 @@ export function ComparisonView({ currency, active, members }: Props) {
 
   // Las mismas categorías que sugiere el formulario, más las que aparecen en el intervalo.
   const categoryOptions = useMemo(() => {
-    const all = new Set<string>([...EXPENSE_CATEGORIES, ...usedCategories]);
-    comparison?.rows.forEach((r) => all.add(r.category));
-    return Array.from(all).sort((a, b) => a.localeCompare(b));
+    return mergeCategories(EXPENSE_CATEGORIES, usedCategories, comparison?.rows.map((r) => r.category) ?? []);
   }, [comparison, usedCategories]);
 
   return (

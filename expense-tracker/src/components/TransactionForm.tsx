@@ -1,14 +1,10 @@
 "use client";
 
 import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
+import { suggestedCategories } from "@/lib/categories";
+import { resolveMemberChoice } from "@/lib/member-totals";
 import { TransactionInputSchema, type TransactionInput } from "@/lib/schema";
-import {
-  EXPENSE_CATEGORIES,
-  INCOME_CATEGORIES,
-  SAVING_CATEGORIES,
-  type Member,
-  type TransactionType,
-} from "@/lib/types";
+import type { Member, TransactionType } from "@/lib/types";
 
 type Props = {
   onAdd: (input: TransactionInput) => void | Promise<void>;
@@ -23,12 +19,6 @@ const TYPE_OPTIONS: { value: TransactionType; label: string; active: string }[] 
   { value: "expense", label: "Gasto", active: "bg-red-600 text-white" },
   { value: "saving", label: "Ahorro", active: "bg-sky-600 text-white" },
 ];
-
-const CATEGORIES_BY_TYPE: Record<TransactionType, string[]> = {
-  income: INCOME_CATEGORIES,
-  expense: EXPENSE_CATEGORIES,
-  saving: SAVING_CATEGORIES,
-};
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
@@ -49,21 +39,13 @@ export function TransactionForm({ onAdd, onDateChange, members = [] }: Props) {
   const [usedCategories, setUsedCategories] = useState<string[]>([]);
   const categoryListId = useId();
 
-  const firstMember = members[0] ? String(members[0].id) : "";
-  const memberValue =
-    chosenMember === "" || members.some((m) => String(m.id) === chosenMember)
-      ? (chosenMember as string)
-      : firstMember;
+  const memberValue = resolveMemberChoice(chosenMember, members);
 
   useEffect(() => {
     fetchCategories(type).then(setUsedCategories);
   }, [type]);
 
-  const categories = useMemo(() => {
-    const base = CATEGORIES_BY_TYPE[type];
-    const extra = usedCategories.filter((c) => !base.includes(c));
-    return [...base, ...extra];
-  }, [type, usedCategories]);
+  const categories = useMemo(() => suggestedCategories(type, usedCategories), [type, usedCategories]);
 
   function handleTypeChange(next: TransactionType) {
     setType(next);

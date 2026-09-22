@@ -6,6 +6,7 @@ import {
   matchesPerson,
   personLabel,
   personOptions,
+  resolveMemberChoice,
 } from "./member-totals";
 import type { Member } from "./types";
 
@@ -59,5 +60,31 @@ describe("personLabel", () => {
     expect(personLabel("2", [ana, luis])).toBe("Luis");
     expect(personLabel(UNASSIGNED, [ana])).toBe("Sin asignar");
     expect(personLabel("99", [ana])).toBe("");
+  });
+});
+
+describe("resolveMemberChoice", () => {
+  const members = [ana, luis];
+
+  it("proposes the first member when nothing was chosen yet", () => {
+    expect(resolveMemberChoice(null, members)).toBe("1");
+  });
+
+  it("respects the member chosen by hand", () => {
+    expect(resolveMemberChoice("2", members)).toBe("2");
+  });
+
+  it("respects an explicit 'Sin asignar' instead of snapping back to the first member", () => {
+    expect(resolveMemberChoice("", members)).toBe("");
+  });
+
+  it("falls back to the first member if the chosen one is no longer available", () => {
+    expect(resolveMemberChoice("99", members)).toBe("1");
+    expect(resolveMemberChoice("2", [ana])).toBe("1");
+  });
+
+  it("is empty when there are no members at all", () => {
+    expect(resolveMemberChoice(null, [])).toBe("");
+    expect(resolveMemberChoice("1", [])).toBe("");
   });
 });

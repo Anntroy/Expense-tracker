@@ -33,3 +33,14 @@ export function personOptions(members: Member[]): { value: PersonFilter; label: 
 export function personLabel(filter: PersonFilter, members: Member[]): string {
   return personOptions(members).find((o) => o.value === filter)?.label ?? "";
 }
+
+/**
+ * Valor del selector "Quién" del formulario. Sin elección todavía (`null`) o si el miembro
+ * elegido ya no está disponible, se propone el primero. "" es "Sin asignar" elegido a mano
+ * y se respeta.
+ */
+export function resolveMemberChoice(chosen: string | null, members: Pick<Member, "id">[]): string {
+  if (chosen === "") return "";
+  if (chosen !== null && members.some((m) => String(m.id) === chosen)) return chosen;
+  return members[0] ? String(members[0].id) : "";
+}
