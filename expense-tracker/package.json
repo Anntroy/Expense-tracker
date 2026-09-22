@@ -2,12 +2,17 @@
   "name": "expense-tracker",
   "version": "0.1.0",
   "private": true,
+  "description": "App de escritorio para controlar los ingresos y gastos del mes.",
+  "author": "Anna Troyan Simakova",
   "main": "dist-electron/electron/main.js",
   "scripts": {
     "dev": "concurrently -k -n NEXT,ELECTRON -c blue,magenta \"npm:dev:next\" \"npm:dev:electron\"",
     "dev:next": "next dev",
     "dev:electron": "wait-on http://localhost:3000 && npm run build:electron && cross-env NODE_ENV=development electron .",
     "build": "npm run build:next && npm run build:electron && electron-builder",
+    "build:mac": "npm run build:next && npm run build:electron && electron-builder --mac",
+    "build:win": "npm run build:next && npm run build:electron && electron-builder --win",
+    "build:linux": "npm run build:next && npm run build:electron && electron-builder --linux",
     "build:next": "next build",
     "build:electron": "tsc -p electron/tsconfig.json && node -e \"const fs=require('fs'); if (fs.existsSync('electron/db/migrations')) fs.cpSync('electron/db/migrations','dist-electron/electron/db/migrations',{recursive:true})\"",
     "db:generate": "drizzle-kit generate",
@@ -18,10 +23,6 @@
   "dependencies": {
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.2",
-    "next": "16.3.5",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
-    "recharts": "^3.10.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -37,9 +38,50 @@
     "electron-builder": "^26.15.3",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
+    "next": "16.3.5",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "recharts": "^3.10.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^5.0.1",
     "wait-on": "^9.1.0"
+  },
+  "build": {
+    "appId": "com.expensetracker.app",
+    "productName": "Expense Tracker",
+    "directories": {
+      "output": "release",
+      "buildResources": "resources"
+    },
+    "files": [
+      "dist-electron/**/*",
+      "out/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.finance",
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] }
+      ]
+    },
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "category": "Office",
+      "target": [
+        { "target": "AppImage", "arch": ["x64"] },
+        { "target": "deb", "arch": ["x64"] }
+      ]
+    }
   }
 }

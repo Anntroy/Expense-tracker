@@ -1,0 +1,7 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Ícono placeholder: mismo azul que la variable "saving" de globals.css (#0284c7, sky-600). -->
+  <rect width="1024" height="1024" rx="220" fill="#0284c7"/>
+  <rect x="260" y="560" width="140" height="300" rx="24" fill="#ffffff"/>
+  <rect x="442" y="420" width="140" height="440" rx="24" fill="#ffffff"/>
+  <rect x="624" y="300" width="140" height="560" rx="24" fill="#ffffff"/>
+</svg>
