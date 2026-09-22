@@ -6,6 +6,9 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: expense-tracker
     steps:
       - uses: actions/checkout@v4
 
@@ -20,5 +23,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: expense-tracker-windows-installer
-          path: release/*.exe
+          path: expense-tracker/release/*.exe
           if-no-files-found: error
