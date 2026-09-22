@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { currentMonthKey, formatMonthShortLabel, monthCount, shiftMonth } from "@/lib/date";
+import { formatMonthShortLabel, monthCount, shortcutRange } from "@/lib/date";
 import { MAX_COMPARISON_MONTHS } from "@/lib/schema";
 
 const SHORTCUTS = [2, 3, 6, 12] as const;
@@ -29,8 +29,7 @@ export function RangePicker({ from, to, onChange, error }: Props) {
 
   function applyShortcut(n: number) {
     // Si "Hasta" está vacío o roto, se ancla en el mes actual.
-    const anchor = /^\d{4}-\d{2}$/.test(to) ? to : currentMonthKey();
-    onChange({ from: shiftMonth(anchor, -(n - 1)), to: anchor });
+    onChange(shortcutRange(to, n));
   }
 
   return (

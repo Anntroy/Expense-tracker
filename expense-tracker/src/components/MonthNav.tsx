@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatMonthShortLabel, monthWindow, shiftMonth, type MonthKey } from "@/lib/date";
+import { formatMonthShortLabel, monthWindow, shiftMonth, windowEndShowing, type MonthKey } from "@/lib/date";
 
 const WINDOW_SIZE = 6;
 
@@ -20,7 +20,7 @@ export function MonthNav({ month, onChange }: Props) {
   // Solo se reacciona al cambio de `month`, así deslizar con las flechas sigue siendo libre.
   if (month !== previousMonth) {
     setPreviousMonth(month);
-    if (!months.includes(month)) setWindowEnd(month);
+    setWindowEnd(windowEndShowing(windowEnd, month, WINDOW_SIZE));
   }
 
   return (

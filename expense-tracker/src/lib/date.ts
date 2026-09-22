@@ -58,3 +58,29 @@ export function monthCount(from: MonthKey, to: MonthKey): number {
   const [toYear, toMonth] = to.split("-").map(Number);
   return (toYear - fromYear) * 12 + (toMonth - fromMonth) + 1;
 }
+
+/** Mes de una fecha: "2026-08-15" -> "2026-08". */
+export function monthOfDate(date: string): MonthKey {
+  return date.slice(0, 7);
+}
+
+/**
+ * Fin de la ventana de pestañas que deja visible `month`: la misma ventana si ya lo
+ * incluye, o una que termina en `month` si quedaba fuera.
+ */
+export function windowEndShowing(windowEnd: MonthKey, month: MonthKey, size: number): MonthKey {
+  return monthWindow(windowEnd, size).includes(month) ? windowEnd : month;
+}
+
+/**
+ * Intervalo de `count` meses que termina en `anchor`. Si `anchor` no es un mes válido
+ * (vacío o a medio escribir) se ancla en `today`.
+ */
+export function shortcutRange(
+  anchor: string,
+  count: number,
+  today: MonthKey = currentMonthKey(),
+): { from: MonthKey; to: MonthKey } {
+  const end = /^\d{4}-\d{2}$/.test(anchor) ? anchor : today;
+  return { from: shiftMonth(end, -(count - 1)), to: end };
+}

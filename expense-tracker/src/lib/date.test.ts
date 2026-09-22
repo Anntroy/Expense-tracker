@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { formatMonthTitle, monthCount, monthDateRange, monthRange, monthWindow, shiftMonth } from "./date";
+import {
+  formatMonthTitle,
+  monthCount,
+  monthDateRange,
+  monthOfDate,
+  monthRange,
+  monthWindow,
+  shiftMonth,
+  shortcutRange,
+  windowEndShowing,
+} from "./date";
 
 describe("shiftMonth", () => {
   it("moves forward and backward within the year", () => {
@@ -65,5 +75,50 @@ describe("monthCount", () => {
 describe("formatMonthTitle", () => {
   it("capitalizes only the first letter, not the words after it", () => {
     expect(formatMonthTitle("2026-09")).toBe("Septiembre de 2026");
+  });
+});
+
+describe("monthOfDate", () => {
+  it("keeps the year and month of a full date", () => {
+    expect(monthOfDate("2026-08-15")).toBe("2026-08");
+    expect(monthOfDate("2025-12-31")).toBe("2025-12");
+  });
+});
+
+describe("windowEndShowing", () => {
+  it("keeps the same window when it already includes the month", () => {
+    expect(windowEndShowing("2026-09", "2026-08", 6)).toBe("2026-09");
+    expect(windowEndShowing("2026-09", "2026-04", 6)).toBe("2026-09"); // primer mes de la ventana
+    expect(windowEndShowing("2026-09", "2026-09", 6)).toBe("2026-09");
+  });
+
+  it("moves the window to end at the month when it falls outside", () => {
+    expect(windowEndShowing("2026-09", "2026-03", 6)).toBe("2026-03"); // uno antes de la ventana
+    expect(windowEndShowing("2026-09", "2025-11", 6)).toBe("2025-11");
+    expect(windowEndShowing("2026-09", "2026-10", 6)).toBe("2026-10"); // después de la ventana
+  });
+});
+
+describe("shortcutRange", () => {
+  it("counts back from the anchor month, both ends included", () => {
+    expect(shortcutRange("2026-09", 6)).toEqual({ from: "2026-04", to: "2026-09" });
+    expect(shortcutRange("2026-09", 2)).toEqual({ from: "2026-08", to: "2026-09" });
+    expect(shortcutRange("2026-09", 12)).toEqual({ from: "2025-10", to: "2026-09" });
+  });
+
+  it("crosses the year boundary", () => {
+    expect(shortcutRange("2026-02", 4)).toEqual({ from: "2025-11", to: "2026-02" });
+  });
+
+  it("anchors on today when the end month is empty or half written", () => {
+    expect(shortcutRange("", 3, "2026-09")).toEqual({ from: "2026-07", to: "2026-09" });
+    expect(shortcutRange("2026-", 3, "2026-09")).toEqual({ from: "2026-07", to: "2026-09" });
+  });
+
+  it("always produces a range of the requested size", () => {
+    for (const n of [2, 3, 6, 12]) {
+      const { from, to } = shortcutRange("2026-09", n);
+      expect(monthCount(from, to)).toBe(n);
+    }
   });
 });
