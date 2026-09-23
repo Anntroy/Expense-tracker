@@ -2,7 +2,8 @@ import { app, BrowserWindow, net, protocol } from "electron";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { createAuth, type Auth } from "./auth";
-import { db, runMigrations } from "./db/client";
+import { createBackupActions } from "./backup";
+import { db, dbPath, migrationsFolder, runMigrations, sqlite } from "./db/client";
 import { createSettingsRepository } from "./db/settings";
 import { registerIpcHandlers } from "./ipc";
 import { productionOutDir, resolveAppRequest } from "./paths";
@@ -50,7 +51,17 @@ app.whenReady().then(() => {
   runMigrations();
   const settings = createSettingsRepository(db);
   const auth = createAuth({ store: settings });
-  registerIpcHandlers({ auth, settings });
+  const backup = createBackupActions({
+    sqlite,
+    dbPath,
+    migrationsFolder,
+    afterImport: () => {
+      runMigrations(); // por si la copia es de una versión anterior de la app
+      auth.lock(); // si la copia trae PIN, se pide antes de ver los datos
+      for (const win of BrowserWindow.getAllWindows()) win.webContents.reload();
+    },
+  });
+  registerIpcHandlers({ auth, settings, backup });
   createWindow(auth);
 
   app.on("activate", () => {

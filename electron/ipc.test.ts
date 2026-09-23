@@ -26,6 +26,7 @@ vi.mock("./db/transactions", () => ({
 }));
 
 import { createAuth, type AuthStore } from "./auth";
+import type { BackupActions } from "./backup";
 import type { SettingsRepository } from "./db/settings";
 import { registerIpcHandlers } from "./ipc";
 import * as data from "./db/transactions";
@@ -47,10 +48,15 @@ const fakeSettings = {
   setCurrency: vi.fn(),
 } as unknown as SettingsRepository;
 
+const fakeBackup = {
+  exportBackup: vi.fn(async () => ({ status: "cancelled" })),
+  importBackup: vi.fn(async () => ({ status: "cancelled" })),
+} as unknown as BackupActions;
+
 function setup() {
   handlers.clear();
   const auth = createAuth({ store: memoryStore() });
-  registerIpcHandlers({ auth, settings: fakeSettings });
+  registerIpcHandlers({ auth, settings: fakeSettings, backup: fakeBackup });
   return auth;
 }
 
@@ -78,6 +84,9 @@ describe("IPC channels while the app is locked", () => {
     expect(data.listTransactions).not.toHaveBeenCalled();
     expect(data.createTransaction).not.toHaveBeenCalled();
     expect(fakeSettings.getCurrency).not.toHaveBeenCalled();
+    // Importar reemplaza todos los datos y exportar los saca de la app: nunca con la app bloqueada.
+    expect(fakeBackup.exportBackup).not.toHaveBeenCalled();
+    expect(fakeBackup.importBackup).not.toHaveBeenCalled();
   });
 
   it("the auth channels do work while locked", () => {
@@ -101,6 +110,8 @@ describe("IPC channels while the app is locked", () => {
     expect(call("transactions:summary", { from: "2026-08", to: "2026-09" }, 3)).toEqual(["resumen"]);
     expect(data.summaryByCategory).toHaveBeenCalledWith({ from: "2026-08", to: "2026-09" }, 3);
     expect(call("settings:getCurrency")).toBe("USD");
+    call("backup:import");
+    expect(fakeBackup.importBackup).toHaveBeenCalled();
   });
 
   it("locking again blocks the data channels", () => {

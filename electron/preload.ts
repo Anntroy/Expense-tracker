@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type {
   AuthStatus,
+  BackupExportResult,
+  BackupImportResult,
   CategoryMonthTotal,
   Currency,
   Member,
@@ -50,6 +52,10 @@ const api = {
       ipcRenderer.invoke("members:rename", id, name),
     setArchived: (id: number, archived: boolean): Promise<void> =>
       ipcRenderer.invoke("members:setArchived", id, archived),
+  },
+  backup: {
+    export: (): Promise<BackupExportResult> => ipcRenderer.invoke("backup:export"),
+    import: (): Promise<BackupImportResult> => ipcRenderer.invoke("backup:import"),
   },
 } satisfies ElectronApi;
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { BackupSettings } from "@/components/BackupSettings";
 import { PinSettings } from "@/components/PinSettings";
 import { errorMessage } from "@/lib/error-message";
 import { MAX_MEMBERS } from "@/lib/schema";
@@ -23,7 +24,7 @@ const inputClass =
 const smallButton =
   "rounded-md px-2 py-1 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50";
 
-/** Configuración de la app. Por ahora: los miembros del hogar (etiquetas "quién"). */
+/** Configuración de la app: miembros del hogar, PIN y copias de seguridad. */
 export function SettingsDialog({ open, onClose, members, onMembersChanged, hasPin, onAuthChanged }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [newName, setNewName] = useState("");
@@ -214,6 +215,10 @@ export function SettingsDialog({ open, onClose, members, onMembersChanged, hasPi
         <hr className="border-zinc-200 dark:border-zinc-800" />
 
         <PinSettings hasPin={hasPin} onChanged={onAuthChanged} />
+
+        <hr className="border-zinc-200 dark:border-zinc-800" />
+
+        <BackupSettings />
       </div>
     </dialog>
   );

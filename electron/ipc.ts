@@ -1,5 +1,6 @@
 import { ipcMain } from "electron";
 import type { Auth } from "./auth";
+import type { BackupActions } from "./backup";
 import type { SettingsRepository } from "./db/settings";
 import {
   createTransaction,
@@ -18,6 +19,7 @@ import type { Currency } from "../src/lib/types";
 type Deps = {
   auth: Auth;
   settings: SettingsRepository;
+  backup: BackupActions;
 };
 
 /**
@@ -26,7 +28,7 @@ type Deps = {
  * la interfaz muestre la pantalla de bloqueo). Los canales `auth:*` son los únicos
  * que funcionan estando bloqueada.
  */
-export function registerIpcHandlers({ auth, settings }: Deps) {
+export function registerIpcHandlers({ auth, settings, backup }: Deps) {
   const guarded =
     <A extends unknown[], R>(fn: (...args: A) => R) =>
     (_event: unknown, ...args: A): R => {
@@ -56,4 +58,6 @@ export function registerIpcHandlers({ auth, settings }: Deps) {
   ipcMain.handle("members:setArchived", guarded(setMemberArchived));
   ipcMain.handle("settings:getCurrency", guarded(() => settings.getCurrency()));
   ipcMain.handle("settings:setCurrency", guarded((currency: Currency) => settings.setCurrency(currency)));
+  ipcMain.handle("backup:export", guarded(() => backup.exportBackup()));
+  ipcMain.handle("backup:import", guarded(() => backup.importBackup()));
 }

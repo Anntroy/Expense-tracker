@@ -1,6 +1,8 @@
 import type { MonthRange, TransactionInput } from "./schema";
 import type {
   AuthStatus,
+  BackupExportResult,
+  BackupImportResult,
   CategoryMonthTotal,
   Currency,
   Member,
@@ -39,6 +41,11 @@ export interface ElectronApi {
     create: (name: string) => Promise<Member>;
     rename: (id: number, name: string) => Promise<void>;
     setArchived: (id: number, archived: boolean) => Promise<void>;
+  };
+  /** Copias de seguridad: los diálogos de archivo los abre el proceso principal. */
+  backup: {
+    export: () => Promise<BackupExportResult>;
+    import: () => Promise<BackupImportResult>;
   };
 }
 

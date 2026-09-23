@@ -54,3 +54,9 @@ export type UnlockResult =
       /** Intentos que quedan antes de la siguiente espera. */
       attemptsLeft: number
     }
+
+/** Resultado de exportar una copia de seguridad. */
+export type BackupExportResult = { status: 'saved'; filePath: string } | { status: 'cancelled' }
+
+/** Resultado de importar una copia (tras importarla, el proceso principal recarga la ventana). */
+export type BackupImportResult = { status: 'imported'; safetyCopy: string } | { status: 'cancelled' }
